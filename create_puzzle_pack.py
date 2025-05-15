@@ -2,270 +2,189 @@
 
 import argparse
 import os
+import subprocess
 import json
 import shutil
-from pathlib import Path
-from PIL import Image
 import tempfile
-import subprocess
-import sys
+import random
+from datetime import datetime
 
 def parse_arguments():
+    """Parse command line arguments for the puzzle pack creator."""
     parser = argparse.ArgumentParser(
-        description='Create a complete puzzle pack from source images'
+        description='Create a jigsaw puzzle pack with multiple layouts from an image'
     )
-    parser.add_argument('images', nargs='+', type=str, 
-                        help='Input images to be converted into puzzles')
-    parser.add_argument('--pack-name', type=str, default='My Puzzle Pack',
-                        help='Name of the puzzle pack')
-    parser.add_argument('--author', type=str, default='Anonymous',
-                        help='Author of the puzzle pack')
-    parser.add_argument('--description', type=str, default=None,
-                        help='Description of the puzzle pack')
-    parser.add_argument('--grid-sizes', nargs='+', type=lambda s: tuple(map(int, s.split('x'))),
-                        default=[(2,2), (4,4), (8,8), (16,16), (32,32)],
-                        help='Grid sizes to generate (e.g., 2x2 4x4 8x8)')
-    parser.add_argument('-o', '--output', type=str, default='puzzle_pack',
-                        help='Output directory for puzzle pack (default: puzzle_pack)')
-    parser.add_argument('--padding', type=int, default=30,
-                        help='Padding around pieces in pixels (default: 30)')
-    parser.add_argument('--no-fixed-size', action='store_true',
-                        help='Disable fixed-size output (default: enabled)')
-    parser.add_argument('--debug', action='store_true',
-                        help='Save debug images')
-    parser.add_argument('--jitter', type=float, default=10.0,
-                        help='Jitter percentage for SVG generation (default: 10.0)')
-    parser.add_argument('--tabsize', type=float, default=22.0,
-                        help='Tab size percentage for SVG generation (default: 22.0)')
-    parser.add_argument('--seed', type=int, default=None,
-                        help='Base random seed for SVG generation (default: random)')
-    parser.add_argument('--radius', type=float, default=3.0,
-                        help='Corner radius for puzzle pieces (default: 3.0)')
-    parser.add_argument('--extractor', type=str, default='jigsaw_piece_extractor.py',
-                        help='Path to jigsaw piece extractor script')
-    parser.add_argument('--gen-jigsaw', type=str, default='gen_jigsaw.py',
-                        help='Path to jigsaw generator script')
+    parser.add_argument('image', type=str, help='Input image to create puzzles from')
+    parser.add_argument('pack_name', type=str, help='Name of the puzzle pack')
+    parser.add_argument('--grids', type=str, default='2x2,4x4,8x8',
+                        help='Comma-separated list of grid sizes (e.g., 2x2,4x4,8x8)')
+    parser.add_argument('--output', type=str, default='puzzle_packs',
+                        help='Output directory for the puzzle pack')
+    parser.add_argument('--author', type=str, default='',
+                        help='Author name for the puzzle pack')
+    parser.add_argument('--copyright', type=str, default='',
+                        help='Copyright information for the puzzle pack')
+    
     return parser.parse_args()
 
+def create_directory_structure(base_dir, pack_name):
+    """Create the necessary directory structure for the puzzle pack."""
+    pack_dir = os.path.join(base_dir, pack_name)
+    os.makedirs(pack_dir, exist_ok=True)
+    return pack_dir
 
-def create_puzzle_pack(args):
-    """Create a complete puzzle pack from source images"""
-    
-    # Create output directory structure
-    pack_path = Path(args.output)
-    pack_path.mkdir(parents=True, exist_ok=True)
-    
-    # Create manifest
+def create_manifest(pack_dir, pack_name, author, copyright_info, puzzles):
+    """Create the manifest.json file for the puzzle pack."""
     manifest = {
-        "name": args.pack_name,
-        "version": "1.0",
-        "author": args.author,
-        "description": args.description or f"Jigsaw puzzle pack: {args.pack_name}",
-        "puzzles": []
+        "name": pack_name,
+        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "puzzles": puzzles
     }
     
-    # Process each image
-    for idx, image_path in enumerate(args.images):
-        puzzle_idx = idx + 1
-        print(f"\nProcessing puzzle {puzzle_idx}: {image_path}")
-        
-        # Create puzzle directory
-        puzzle_dir = pack_path / f"puzzle_{puzzle_idx:02d}"
-        puzzle_dir.mkdir(exist_ok=True)
-        
-        # Load and process the source image
-        try:
-            source_img = Image.open(image_path)
-            img_width, img_height = source_img.size
-            
-            # Save preview image
-            preview_path = puzzle_dir / "preview.jpg"
-            preview_img = source_img.convert('RGB')
-            preview_img.save(preview_path, quality=90)
-            
-            # Create puzzle info
-            puzzle_info = {
-                "id": f"puzzle_{puzzle_idx:02d}",
-                "name": f"Puzzle {puzzle_idx}",
-                "source_image": os.path.basename(image_path),
-                "layouts": []
-            }
-            
-            # Create layouts directory
-            layouts_dir = puzzle_dir / "layouts"
-            layouts_dir.mkdir(exist_ok=True)
-            
-            # Process each grid size
-            for grid_size in args.grid_sizes:
-                cols, rows = grid_size
-                layout_name = f"{cols}x{rows}"
-                print(f"  Creating layout {layout_name}")
-                
-                layout_dir = layouts_dir / layout_name
-                layout_dir.mkdir(exist_ok=True)
-                
-                # Generate SVG using gen_jigsaw.py with image dimensions
-                svg_path = layout_dir / "outline.svg"
-                
-                # Build the command with proper formatting and dimensions
-                gen_jigsaw_cmd = [
-                    sys.executable, args.gen_jigsaw,
-                    '--grid', str(cols), str(rows),
-                    '-o', str(svg_path),
-                    '--jitter', str(args.jitter),
-                    '--tabsize', str(args.tabsize),
-                    '--width', str(img_width),    # Use image width
-                    '--height', str(img_height),  # Use image height
-                    '--radius', str(args.radius)
-                ]
-                
-                if args.seed is not None:
-                    layout_seed = args.seed + idx * 1000 + cols * 100 + rows
-                    gen_jigsaw_cmd.extend(['--seed', str(layout_seed)])
-                
-                # Run gen_jigsaw.py
-                try:
-                    result = subprocess.run(gen_jigsaw_cmd, check=True, capture_output=True, text=True)
-                    print(f"    Generated SVG for {layout_name}")
-                except subprocess.CalledProcessError as e:
-                    print(f"Error running gen_jigsaw.py: {e}")
-                    print(f"Command: {' '.join(gen_jigsaw_cmd)}")
-                    print(f"Stdout: {e.stdout}")
-                    print(f"Stderr: {e.stderr}")
-                    raise
-                
-                # Create temporary directory for pieces
-                with tempfile.TemporaryDirectory() as temp_pieces_dir:
-                    # Extract puzzle pieces using original extractor
-                    extract_cmd = [
-                        sys.executable, args.extractor,
-                        image_path,
-                        str(svg_path),
-                        '-o', temp_pieces_dir,
-                        '--prefix', 'piece',
-                        '--padding', str(args.padding)
-                    ]
-                    
-                    # Fixed-size is now default, only disable if specified
-                    if not args.no_fixed_size:
-                        extract_cmd.append('--fixed-size')
-                    
-                    if args.debug:
-                        extract_cmd.append('--debug')
-                    
-                    # Run original extractor
-                    try:
-                        result = subprocess.run(extract_cmd, check=True, capture_output=True, text=True)
-                        print(f"    Extracted pieces for {layout_name}")
-                    except subprocess.CalledProcessError as e:
-                        print(f"Error running extractor: {e}")
-                        print(f"Command: {' '.join(extract_cmd)}")
-                        print(f"Stdout: {e.stdout}")
-                        print(f"Stderr: {e.stderr}")
-                        raise
-                    
-                    # Create pieces directory in layout
-                    pieces_dir = layout_dir / "pieces"
-                    pieces_dir.mkdir(exist_ok=True)
-                    
-                    # Copy and rename pieces
-                    piece_count = 0
-                    for temp_piece in Path(temp_pieces_dir).glob("piece_*_*.png"):
-                        # Extract row and column from filename
-                        parts = temp_piece.stem.split('_')
-                        if len(parts) == 3:  # piece_ROW_COL
-                            row = int(parts[1])
-                            col = int(parts[2])
-                            # Use COL_ROW format for puzzle pack
-                            new_name = f"{col}_{row}.png"
-                            new_path = pieces_dir / new_name
-                            shutil.copy2(temp_piece, new_path)
-                            piece_count += 1
-                
-                # Create preview with outline
-                preview_outline_path = layout_dir / "preview-outline.png"
-                create_preview_with_outline(str(preview_path), str(svg_path), 
-                                          str(preview_outline_path))
-                
-                # Add layout info
-                puzzle_info["layouts"].append({
-                    "grid": layout_name,
-                    "cols": cols,
-                    "rows": rows,
-                    "piece_count": piece_count
-                })
-                
-                print(f"    Created {piece_count} pieces for {layout_name}")
-            
-            # Add puzzle to manifest
-            manifest["puzzles"].append(puzzle_info)
-            
-        except Exception as e:
-            print(f"Error processing {image_path}: {e}")
-            import traceback
-            traceback.print_exc()
+    if author:
+        manifest["author"] = author
     
-    # Save manifest
-    manifest_path = pack_path / "manifest.json"
+    if copyright_info:
+        manifest["copyright"] = copyright_info
+    
+    manifest_path = os.path.join(pack_dir, "manifest.json")
     with open(manifest_path, 'w') as f:
         json.dump(manifest, f, indent=2)
     
-    print(f"\nPuzzle pack created successfully at: {pack_path}")
-    print(f"Total puzzles: {len(manifest['puzzles'])}")
+    print(f"Created manifest at {manifest_path}")
 
+def generate_jigsaw_outline(output_dir, cols, rows, width, height, seed=None):
+    """Generate a jigsaw outline SVG using gen_jigsaw.py."""
+    if seed is None:
+        seed = random.randint(1, 10000)
+    
+    output_svg = os.path.join(output_dir, "outline.svg")
+    
+    cmd = [
+        "python3", "gen_jigsaw.py",
+        "--grid", str(cols), str(rows),
+        "--width", str(width),
+        "--height", str(height),
+        "--seed", str(seed),
+        "-o", output_svg
+    ]
+    
+    print(f"Generating jigsaw outline for {cols}x{rows} grid...")
+    subprocess.run(cmd, check=True)
+    
+    return output_svg
 
-def create_preview_with_outline(image_path, svg_path, output_path):
-    """Create a preview image with the jigsaw outline overlaid"""
-    try:
-        from cairosvg import svg2png
-        import numpy as np
-        
-        # Load the image
-        img = Image.open(image_path)
-        
-        # Create a temporary PNG from the SVG at the same size as the image
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
-            svg2png(url=svg_path, write_to=tmp.name, 
-                   output_width=img.width, output_height=img.height)
-            
-            # Load the SVG as an image
-            svg_img = Image.open(tmp.name).convert('RGBA')
-            
-            # Create a mask from the black lines
-            svg_array = np.array(svg_img)
-            
-            # Find black pixels (the lines)
-            black_pixels = (svg_array[:,:,0] < 128) & (svg_array[:,:,1] < 128) & (svg_array[:,:,2] < 128)
-            
-            # Create an overlay with semi-transparent lines
-            overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
-            overlay_array = np.array(overlay)
-            
-            # Set the line pixels to semi-transparent dark gray
-            overlay_array[black_pixels] = [64, 64, 64, 192]  # Dark gray with alpha
-            
-            # Convert back to image
-            overlay = Image.fromarray(overlay_array)
-            
-            # Composite the overlay onto the original image
-            img_with_lines = Image.alpha_composite(img.convert('RGBA'), overlay)
-            
-            # Save the result
-            img_with_lines.convert('RGB').save(output_path, quality=90)
-            
-        # Clean up
-        os.unlink(tmp.name)
-        
-    except Exception as e:
-        print(f"Error creating preview with outline: {e}")
-        # Fallback: just copy the original image
-        shutil.copy2(image_path, output_path)
+def extract_puzzle_pieces(image_path, svg_path, output_dir, puzzle_name, layout_name):
+    """Extract puzzle pieces using jigsaw_piece_extractor.py."""
+    cmd = [
+        "python3", "jigsaw_piece_extractor.py",
+        image_path,
+        svg_path,
+        "-o", output_dir,
+        "--puzzle-name", puzzle_name,
+        "--layout-name", layout_name,
+        "--format", "png",
+        "--padding", "30",
+        "--fixed-size"
+    ]
+    
+    print(f"Extracting puzzle pieces for {layout_name} layout...")
+    subprocess.run(cmd, check=True)
 
+def get_image_dimensions(image_path):
+    """Get the dimensions of an image using PIL."""
+    from PIL import Image
+    with Image.open(image_path) as img:
+        return img.width, img.height
+
+def create_puzzle_pack(image_path, pack_name, grids, output_dir, author, copyright_info):
+    """Create a complete puzzle pack with specified grid sizes."""
+    # Create the base pack directory
+    pack_dir = create_directory_structure(output_dir, pack_name)
+    
+    # Get image dimensions to preserve aspect ratio
+    img_width, img_height = get_image_dimensions(image_path)
+    
+    # Create a single puzzle with multiple layouts
+    puzzle_name = "puzzle_01"
+    puzzle_dir = os.path.join(pack_dir, puzzle_name)
+    os.makedirs(puzzle_dir, exist_ok=True)
+    
+    # Copy the original image as preview
+    from PIL import Image
+    preview_path = os.path.join(puzzle_dir, "preview.jpg")
+    with Image.open(image_path) as img:
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+        img.save(preview_path, quality=90)
+    
+    # Create layouts directory
+    layouts_dir = os.path.join(puzzle_dir, "layouts")
+    os.makedirs(layouts_dir, exist_ok=True)
+    
+    # Parse grid sizes
+    grid_sizes = []
+    for grid in grids.split(','):
+        if 'x' in grid:
+            cols, rows = map(int, grid.split('x'))
+            grid_sizes.append((cols, rows))
+        else:
+            # If only one number is provided, use it for both dimensions
+            size = int(grid)
+            grid_sizes.append((size, size))
+    
+    # Process each grid size
+    layouts = []
+    for cols, rows in grid_sizes:
+        layout_name = f"{cols}x{rows}"
+        print(f"\nProcessing layout: {layout_name}")
+        
+        # Create layout directory
+        layout_dir = os.path.join(layouts_dir, layout_name)
+        os.makedirs(layout_dir, exist_ok=True)
+        
+        # Generate jigsaw outline
+        svg_path = generate_jigsaw_outline(layout_dir, cols, rows, img_width, img_height)
+        
+        # Extract puzzle pieces
+        extract_puzzle_pieces(image_path, svg_path, output_dir, puzzle_name, layout_name)
+        
+        layouts.append(layout_name)
+    
+    # Create manifest.json
+    puzzles = [{"name": puzzle_name, "layouts": layouts}]
+    create_manifest(pack_dir, pack_name, author, copyright_info, puzzles)
+    
+    print(f"\nPuzzle pack created successfully at: {pack_dir}")
+    return pack_dir
+
+def create_zip_archive(pack_dir):
+    """Create a zip archive of the puzzle pack."""
+    shutil.make_archive(pack_dir, 'zip', os.path.dirname(pack_dir), os.path.basename(pack_dir))
+    print(f"Created zip archive: {pack_dir}.zip")
 
 def main():
     args = parse_arguments()
-    create_puzzle_pack(args)
-
+    
+    # Validate input image
+    if not os.path.exists(args.image):
+        print(f"Error: Input image '{args.image}' does not exist.")
+        return 1
+    
+    # Create the puzzle pack
+    pack_dir = create_puzzle_pack(
+        args.image,
+        args.pack_name,
+        args.grids,
+        args.output,
+        args.author,
+        args.copyright
+    )
+    
+    # Create a zip archive
+    create_zip_archive(pack_dir)
+    
+    return 0
 
 if __name__ == "__main__":
-    main()
+    exit(main())
