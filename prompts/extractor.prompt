@@ -1,0 +1,720 @@
+For the purposes of my environment assume I have a Python virtual environment already configured with Python 3.12 and the following packages are already installed.   Please indicate additional packages required, if necessary:
+```requirements.txt
+numpy>=1.20.0
+Pillow>=8.0.0
+cairosvg>=2.5.0
+svgpathtools>=1.4.1
+shapely>=1.8.0
+pycairo>=1.20.0
+```
+
+I would like to extract PNG files from the an input image and an outline.svg.   I am including an example outline.svg for a small 4x4 test jigsaw puzzle I created, although it was renamed as 'outline.svg.txt' so that the source of this SVG file could be analysed.   The outline.svg fragment is in this text: 
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" version="1.0" width="2048mm" height="2048mm" viewBox="0 0 2048 2048"><path fill="none" stroke="Black" stroke-width="0.1" d="M 0.0,512.0 C 102.4 478.3 283.88 474.24 192.21 586.88 C 100.54 699.52 325.82 699.52 304.85 586.88 C 283.88 474.24 409.6 512.86 512.0 512.0 C 614.4 511.14 699.77 477.11 665.89 589.75 C 632.01 702.39 857.29 702.39 778.53 589.75 C 699.77 477.11 921.6 561.09 1024.0 512.0 C 1126.4 462.91 1234.88 421.14 1197.04 533.78 C 1159.2 646.42 1384.48 646.42 1309.68 533.78 C 1234.88 421.14 1433.6 513.1 1536.0 512.0 C 1638.4 510.9 1824.11 555.66 1757.06 443.02 C 1690.01 330.38 1915.29 330.38 1869.7 443.02 C 1824.11 555.66 1945.6 528.09 2048.0 512.0 M 0.0,1024.0 C 102.4 1074.36 224.31 975.78 189.21 1088.42 C 154.11 1201.06 379.39 1201.06 301.85 1088.42 C 224.31 975.78 409.6 1039.48 512.0 1024.0 C 614.4 1008.52 731.07 1059.71 700.44 947.07 C 669.81 834.43 895.09 834.43 813.08 947.07 C 731.07 1059.71 921.6 1029.77 1024.0 1024.0 C 1126.4 1018.23 1238.1 1104.01 1200.32 991.37 C 1162.53 878.73 1387.81 878.73 1312.96 991.37 C 1238.1 1104.01 1433.6 1048.33 1536.0 1024.0 C 1638.4 999.67 1800.91 923.72 1771.57 1036.36 C 1742.23 1149.0 1967.51 1149.0 1884.21 1036.36 C 1800.91 923.72 1945.6 1038.5 2048.0 1024.0 M 0.0,1536.0 C 102.4 1507.05 211.13 1575.19 184.24 1462.55 C 157.35 1349.91 382.63 1349.91 296.88 1462.55 C 211.13 1575.19 409.6 1524.43 512.0 1536.0 C 614.4 1547.57 779.27 1489.58 727.97 1602.22 C 676.66 1714.86 901.94 1714.86 840.61 1602.22 C 779.27 1489.58 921.6 1568.2 1024.0 1536.0 C 1126.4 1503.8 1255.16 1434.12 1238.1 1546.76 C 1221.03 1659.4 1446.31 1659.4 1350.74 1546.76 C 1255.16 1434.12 1433.6 1577.13 1536.0 1536.0 C 1638.4 1494.87 1799.4 1605.96 1701.82 1493.32 C 1604.25 1380.68 1829.53 1380.68 1814.46 1493.32 C 1799.4 1605.96 1945.6 1565.06 2048.0 1536.0 "></path><path fill="none" stroke="Black" stroke-width="0.1" d="M 512.0,0.0 C 560.63 102.4 476.95 331.73 589.59 239.17 C 702.23 146.6 702.23 371.88 589.59 351.81 C 476.95 331.73 474.65 409.6 512.0 512.0 C 549.35 614.4 586.85 774.59 474.21 747.16 C 361.57 719.72 361.57 945.0 474.21 859.8 C 586.85 774.59 547.78 921.6 512.0 1024.0 C 476.22 1126.4 451.67 1261.56 564.31 1243.4 C 676.95 1225.25 676.95 1450.53 564.31 1356.04 C 451.67 1261.56 502.16 1433.6 512.0 1536.0 C 521.84 1638.4 538.1 1785.62 425.46 1771.11 C 312.82 1756.6 312.82 1981.88 425.46 1883.75 C 538.1 1785.62 484.64 1945.6 512.0 2048.0 M 1024.0,0.0 C 1036.32 102.4 1087.66 283.34 975.02 177.33 C 862.38 71.33 862.38 296.61 975.02 289.97 C 1087.66 283.34 1040.66 409.6 1024.0 512.0 C 1007.34 614.4 937.17 760.15 1049.81 709.69 C 1162.45 659.23 1162.45 884.51 1049.81 822.33 C 937.17 760.15 1033.92 921.6 1024.0 1024.0 C 1014.08 1126.4 1038.6 1241.82 925.96 1223.79 C 813.32 1205.76 813.32 1431.04 925.96 1336.43 C 1038.6 1241.82 994.04 1433.6 1024.0 1536.0 C 1053.96 1638.4 1030.87 1789.31 918.23 1765.42 C 805.59 1741.52 805.59 1966.8 918.23 1878.06 C 1030.87 1789.31 987.71 1945.6 1024.0 2048.0 M 1536.0,0.0 C 1541.7 102.4 1436.84 221.26 1549.48 151.44 C 1662.12 81.61 1662.12 306.89 1549.48 264.08 C 1436.84 221.26 1497.64 409.6 1536.0 512.0 C 1574.36 614.4 1509.53 737.74 1622.17 675.54 C 1734.81 613.34 1734.81 838.62 1622.17 788.18 C 1509.53 737.74 1534.64 921.6 1536.0 1024.0 C 1537.36 1126.4 1592.59 1231.81 1479.95 1197.65 C 1367.31 1163.49 1367.31 1388.77 1479.95 1310.29 C 1592.59 1231.81 1510.52 1433.6 1536.0 1536.0 C 1561.48 1638.4 1521.98 1766.32 1634.62 1736.86 C 1747.26 1707.41 1747.26 1932.69 1634.62 1849.5 C 1521.98 1766.32 1584.15 1945.6 1536.0 2048.0 "></path><path fill="none" stroke="Black" stroke-width="0.1" d="M 3.0 0.0 L 2045.0 0.0 A 3.0 3.0 0 0 1 2048.0 3.0 L 2048.0 2045.0 A 3.0 3.0 0 0 1 2045.0 2048.0 L 3.0 2048.0 A 3.0 3.0 0 0 1 0.0 2045.0 L 0.0 3.0 A 3.0 3.0 0 0 1 3.0 0.0 "></path></svg>
+```
+
+For the implementation strategy for cutting the PNGs out of the input image, please consider that I might want to create puzzle packs with 4x4 for test, but in production settings, 8x8, 16x16, and 32x32.    So that would mean in the largest case generating a set of 1024 puzzle pieces.   This should be completable in a 'normal' amount of time (minutes rather than hours or longer).
+
+Please implement the entire script jigsaw_piece_extractor.py and accept the following usage arguments:
+```
+usage: jigsaw_piece_extractor.py [-h] [-o OUTPUT] [--prefix PREFIX] [--format FORMAT] [--padding PADDING]
+                                 image svg
+
+Extract jigsaw puzzle pieces from an image using an SVG outline template
+
+positional arguments:
+  image                 Input image to be cut into puzzle pieces
+  svg                   SVG file defining the jigsaw cuts
+
+options:
+  -h, --help            show this help message and exit
+  -o OUTPUT, --output OUTPUT
+                        Output folder for the puzzle pieces (default: pieces)
+  --prefix PREFIX       Prefix for output filenames (default: piece)
+  --format FORMAT       Output image format (default: png)
+  --padding PADDING     Padding around pieces in pixels (default: 30)
+```
+
+The outline.svg defines infinitely thin jigsaw cuts through the pixels in the input image.   The set of horizontal cuts (H) and vertical cuts (V) will create a grid of H*V pieces, and there will be a png image extracted as a transparent PNG with the piece centered in the PNG, and sufficient transparent padding around the piece image to account for tabs that extend outward beyond it's grid boundary into a neighboring piece, or a socket, an indentation that accepts a tab from a neighboring piece.
+
+Please write out these PNG images along with associated metadata in the form of a 'puzzle pack', described below.
+
+Each puzzle pack is delivered as a zip archive. After extraction, the folder structure is as follows:
+
+puzzle_pack_name/
+├── manifest.json                      # JSON file describing metadata for the pack
+├── puzzle_01/
+│   ├── preview.jpg                    # Preview image of the completed puzzle
+│   └── layouts/
+│       ├── 2x2/
+│       │   ├── outline.svg
+│       │   └── pieces/
+│       │       ├── 0_0.png
+│       │       ├── 0_1.png
+│       │       ├── 1_0.png
+│       │       └── 1_1.png
+│       ├── 16x16/
+│       │   ├── outline.svg
+│       │   └── pieces/
+│       │       └── 0_0.png through 15_15.png
+│       └── 32x32/
+│           └── (same format)
+├── puzzle_02/
+│   └── (same structure)
+
+Each layout contains:
+- `outline.svg`: the vector outline of the jigsaw cut pattern
+- `preview-outline.png`: the preview with the cut outline for reference
+- `pieces/`: transparent PNG files, each representing a jigsaw piece
+- `pieces/solution.json`: JSON coordinates of all piece offsets in the 'solved' puzzle.
+
+The puzzle pieces are named using the pattern `X_Y.png` based on their row and column in the grid (0-indexed). For example, `2_3.png` is the piece at row 2, column 3. This naming allows a script to reconstruct the solved puzzle layout using the filenames and the solution.json which then maps the X_Y grid coordinate to pixel offsets within the original puzzle image.
+
+For the purpose of calculating offsets for pieces within the solved puzzle, and given that the shapes of each puzzle piece vary from piece to piece, it's important to have a strict definition of what point within the image of the piece that we want to use when calculating position translations and offsets. 
+
+For each piece let there be one pixel which is non-transparent that will be defined as the 'handle pixel'.    It is named thus because we might think of picking up the piece by it's handle, and so easily calculate the offset from where it is in relation to it's location in the solved puzzle by vector math.
+
+The images of the pieces are surrounded by transparent margins and centered, so let's define a way to always find the handle pixel in a procedural way that always results in the same answer.   Let there be an expanding radius from the top left corner of the png image, as the radius expands it will eventually overlap with a non-transparent pixel.   The first one found intersecting the expanding radius will be the handle pixel for that piece.
+
+Another way to state this is the handle pixel has the following property: it is a non-transparent pixel with the least euclidean distance from the top left corner of the grid in which it's contains (PNG pixel grid or SVG cell within outline.svg).
+
+This handle pixel can also be calculated more easily from the outline.svg because all handle pixels will be located at the intersection of a vertical and horizontal Bezier cut (or from the implied straight cuts along the top, bottom, left, and right edges of the puzzle).
+
+I have an existing python script for jigsaw_piece_extractor.py, which extracts the pieces nicely.   I do not want to change the way it extracts the pieces or the PNGs that it produces.    I would like to add the pixel handle concept so that I can have a stable measurement vector that will go into the solution.json file.   Please add the pixel handle feature and produce the solution.json but leave my code for generating the PNGs the same as it currently is.   here's my existing script: 
+```
+#!/usr/bin/env python3
+
+import argparse
+import os
+import numpy as np
+from PIL import Image, ImageDraw
+
+# Disable DecompressionBombWarning for large images
+Image.MAX_IMAGE_PIXELS = None
+
+import tempfile
+import sys
+import re
+from cairosvg import svg2png
+import xml.etree.ElementTree as ET
+import shutil
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description='Extract jigsaw puzzle pieces from an image using an SVG outline template'
+    )
+    parser.add_argument('image', type=str, help='Input image to be cut into puzzle pieces')
+    parser.add_argument('svg', type=str, help='SVG file defining the jigsaw cuts')
+    parser.add_argument('-o', '--output', type=str, default='pieces',
+                        help='Output folder for the puzzle pieces (default: pieces)')
+    parser.add_argument('--prefix', type=str, default='piece',
+                        help='Prefix for output filenames (default: piece)')
+    parser.add_argument('--format', type=str, default='png',
+                        help='Output image format (default: png)')
+    parser.add_argument('--padding', type=int, default=30,
+                        help='Padding around pieces in pixels (default: 30)')
+    parser.add_argument('--fixed-size', action='store_true',
+                        help='Output all pieces with the same dimensions')
+    parser.add_argument('--output-width', type=int, default=None,
+                        help='Fixed width for output pieces (default: auto-calculated)')
+    parser.add_argument('--output-height', type=int, default=None,
+                        help='Fixed height for output pieces (default: auto-calculated)')
+    parser.add_argument('--debug', action='store_true',
+                        help='Save debug images')
+    return parser.parse_args()
+
+def get_svg_dimensions(svg_file):
+    """Extract dimensions from SVG file"""
+    tree = ET.parse(svg_file)
+    root = tree.getroot()
+    
+    # Look for viewBox attribute
+    if 'viewBox' in root.attrib:
+        viewbox = root.attrib['viewBox'].split()
+        width = float(viewbox[2])
+        height = float(viewbox[3])
+    else:
+        # Look for width and height attributes
+        width = height = None
+        if 'width' in root.attrib:
+            width_str = root.attrib['width']
+            width = float(width_str.replace('mm', '').strip())
+        if 'height' in root.attrib:
+            height_str = root.attrib['height']
+            height = float(height_str.replace('mm', '').strip())
+        
+        # Default values if nothing found
+        if width is None: width = 300
+        if height is None: height = 200
+    
+    return width, height
+
+def determine_grid_size(svg_file):
+    """Determine puzzle grid size from SVG file"""
+    try:
+        tree = ET.parse(svg_file)
+        root = tree.getroot()
+        
+        # Get namespace
+        ns = {'svg': 'http://www.w3.org/2000/svg'}
+        
+        # Find path elements
+        paths = root.findall('.//svg:path', ns)
+        
+        if len(paths) < 3:
+            # Try without namespace
+            paths = root.findall('.//path')
+        
+        if len(paths) < 3:
+            print("Warning: Could not find enough paths in SVG file, using default grid size.")
+            return 4, 4
+        
+        # Get horizontal and vertical divider paths
+        h_path = v_path = None
+        
+        # Look for darkblue/darkred paths if available
+        for path in paths:
+            stroke = path.get('stroke', '').lower()
+            if stroke == 'darkblue' or (h_path is None and stroke == 'black'):
+                h_path = path
+            elif stroke == 'darkred' or (v_path is None and h_path is not None and stroke == 'black'):
+                v_path = path
+        
+        # If we couldn't find colored paths, use the first two paths
+        if h_path is None and len(paths) > 0:
+            h_path = paths[0]
+        if v_path is None and len(paths) > 1:
+            v_path = paths[1]
+        
+        # Count M commands to determine rows and columns
+        rows = cols = None
+        
+        if h_path is not None and 'd' in h_path.attrib:
+            h_path_data = h_path.attrib['d']
+            # Count M commands to determine number of horizontal dividers
+            h_dividers = h_path_data.count('M ')
+            rows = h_dividers + 1
+        
+        if v_path is not None and 'd' in v_path.attrib:
+            v_path_data = v_path.attrib['d']
+            # Count M commands to determine number of vertical dividers
+            v_dividers = v_path_data.count('M ')
+            cols = v_dividers + 1
+        
+        # Default values if we couldn't determine
+        if rows is None: rows = 4
+        if cols is None: cols = 4
+        
+        # Get SVG dimensions
+        width, height = get_svg_dimensions(svg_file)
+        
+        return cols, rows, width, height
+        
+    except Exception as e:
+        print(f"Error determining grid size: {e}")
+        # Default values if there's an error
+        return 4, 4, 300, 200
+
+def create_horizontal_cut_svg(svg_file, temp_dir, row, rows, direction):
+    """Create an SVG file that shows a single horizontal cut line
+    direction: 'above' or 'below'
+    """
+    # Get SVG dimensions
+    width, height = get_svg_dimensions(svg_file)
+    
+    # Parse the original SVG to get the paths
+    with open(svg_file, 'r') as f:
+        svg_content = f.read()
+    
+    # Extract path elements
+    path_pattern = r'<path[^>]*d="([^"]*)"[^>]*>'
+    paths = re.findall(path_pattern, svg_content)
+    
+    if len(paths) < 3:
+        print("Not enough paths found in the SVG file")
+        return None
+    
+    # Get the horizontal divider paths
+    h_paths = paths[0]
+    
+    # Split the horizontal paths into segments
+    h_segments = h_paths.split('M ')
+    h_segments = [seg for seg in h_segments if seg.strip()]
+    
+    # Get the segment for this row
+    if direction == 'above' and row > 0:
+        segment_index = row - 1
+    elif direction == 'below' and row < rows - 1:
+        segment_index = row
+    else:
+        # This is an edge piece with no cut on this side
+        return None
+    
+    if segment_index < len(h_segments):
+        segment = h_segments[segment_index]
+    else:
+        print(f"Segment index {segment_index} out of range for horizontal segments")
+        return None
+    
+    # Create a new SVG with just this cut line
+    cut_svg = f'''<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
+  <rect x="0" y="0" width="{width}" height="{height}" fill="white"/>
+  <path d="M {segment}" stroke="black" stroke-width="1" fill="none"/>
+</svg>'''
+    
+    # Write the SVG file
+    cut_svg_path = os.path.join(temp_dir, f"h_cut_{row}_{direction}.svg")
+    with open(cut_svg_path, 'w') as f:
+        f.write(cut_svg)
+    
+    return cut_svg_path
+
+def create_vertical_cut_svg(svg_file, temp_dir, col, cols, direction):
+    """Create an SVG file that shows a single vertical cut line
+    direction: 'left' or 'right'
+    """
+    # Get SVG dimensions
+    width, height = get_svg_dimensions(svg_file)
+    
+    # Parse the original SVG to get the paths
+    with open(svg_file, 'r') as f:
+        svg_content = f.read()
+    
+    # Extract path elements
+    path_pattern = r'<path[^>]*d="([^"]*)"[^>]*>'
+    paths = re.findall(path_pattern, svg_content)
+    
+    if len(paths) < 3:
+        print("Not enough paths found in the SVG file")
+        return None
+    
+    # Get the vertical divider paths
+    v_paths = paths[1]
+    
+    # Split the vertical paths into segments
+    v_segments = v_paths.split('M ')
+    v_segments = [seg for seg in v_segments if seg.strip()]
+    
+    # Get the segment for this column
+    if direction == 'left' and col > 0:
+        segment_index = col - 1
+    elif direction == 'right' and col < cols - 1:
+        segment_index = col
+    else:
+        # This is an edge piece with no cut on this side
+        return None
+    
+    if segment_index < len(v_segments):
+        segment = v_segments[segment_index]
+    else:
+        print(f"Segment index {segment_index} out of range for vertical segments")
+        return None
+    
+    # Create a new SVG with just this cut line
+    cut_svg = f'''<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
+  <rect x="0" y="0" width="{width}" height="{height}" fill="white"/>
+  <path d="M {segment}" stroke="black" stroke-width="1" fill="none"/>
+</svg>'''
+    
+    # Write the SVG file
+    cut_svg_path = os.path.join(temp_dir, f"v_cut_{col}_{direction}.svg")
+    with open(cut_svg_path, 'w') as f:
+        f.write(cut_svg)
+    
+    return cut_svg_path
+
+def create_border_cut_svg(svg_file, temp_dir, row, col, rows, cols):
+    """Create an SVG file that shows the border cut lines for edge pieces"""
+    # Get SVG dimensions
+    width, height = get_svg_dimensions(svg_file)
+    
+    # Parse the original SVG to get the paths
+    with open(svg_file, 'r') as f:
+        svg_content = f.read()
+    
+    # Extract path elements
+    path_pattern = r'<path[^>]*d="([^"]*)"[^>]*>'
+    paths = re.findall(path_pattern, svg_content)
+    
+    if len(paths) < 3:
+        print("Not enough paths found in the SVG file")
+        return None
+    
+    # Get the border path
+    border = paths[2]
+    
+    # Create a new SVG with just the border
+    cut_svg = f'''<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
+  <rect x="0" y="0" width="{width}" height="{height}" fill="white"/>
+  <path d="{border}" stroke="black" stroke-width="1" fill="none"/>
+</svg>'''
+    
+    # Write the SVG file
+    cut_svg_path = os.path.join(temp_dir, f"border_cut.svg")
+    with open(cut_svg_path, 'w') as f:
+        f.write(cut_svg)
+    
+    return cut_svg_path
+
+def create_cut_masks(svg_file, temp_dir, row, col, rows, cols, img_width, img_height, debug=False):
+    """Create mask images for the four cuts around a piece"""
+    cut_masks = {}
+    
+    # Create horizontal cut above this piece
+    h_above_svg = create_horizontal_cut_svg(svg_file, temp_dir, row, rows, 'above')
+    if h_above_svg:
+        h_above_png = os.path.join(temp_dir, f"h_above_{row}_{col}.png")
+        svg2png(url=h_above_svg, write_to=h_above_png, 
+              output_width=img_width, output_height=img_height)
+        cut_masks['above'] = h_above_png
+    
+    # Create horizontal cut below this piece
+    h_below_svg = create_horizontal_cut_svg(svg_file, temp_dir, row, rows, 'below')
+    if h_below_svg:
+        h_below_png = os.path.join(temp_dir, f"h_below_{row}_{col}.png")
+        svg2png(url=h_below_svg, write_to=h_below_png, 
+              output_width=img_width, output_height=img_height)
+        cut_masks['below'] = h_below_png
+    
+    # Create vertical cut to the left of this piece
+    v_left_svg = create_vertical_cut_svg(svg_file, temp_dir, col, cols, 'left')
+    if v_left_svg:
+        v_left_png = os.path.join(temp_dir, f"v_left_{row}_{col}.png")
+        svg2png(url=v_left_svg, write_to=v_left_png, 
+              output_width=img_width, output_height=img_height)
+        cut_masks['left'] = v_left_png
+    
+    # Create vertical cut to the right of this piece
+    v_right_svg = create_vertical_cut_svg(svg_file, temp_dir, col, cols, 'right')
+    if v_right_svg:
+        v_right_png = os.path.join(temp_dir, f"v_right_{row}_{col}.png")
+        svg2png(url=v_right_svg, write_to=v_right_png, 
+              output_width=img_width, output_height=img_height)
+        cut_masks['right'] = v_right_png
+    
+    # Create border cut for edge pieces
+    if row == 0 or row == rows - 1 or col == 0 or col == cols - 1:
+        border_svg = create_border_cut_svg(svg_file, temp_dir, row, col, rows, cols)
+        if border_svg:
+            border_png = os.path.join(temp_dir, f"border_{row}_{col}.png")
+            svg2png(url=border_svg, write_to=border_png, 
+                  output_width=img_width, output_height=img_height)
+            cut_masks['border'] = border_png
+    
+    return cut_masks
+
+def center_and_resize_image(image, target_width, target_height):
+    """Center an image in a new image of the specified dimensions"""
+    # Create a new transparent image with the target dimensions
+    new_image = Image.new('RGBA', (target_width, target_height), (0, 0, 0, 0))
+    
+    # Calculate the position to center the original image
+    x_offset = (target_width - image.width) // 2
+    y_offset = (target_height - image.height) // 2
+    
+    # Paste the original image onto the new image
+    new_image.paste(image, (x_offset, y_offset))
+    
+    return new_image
+
+def extract_puzzle_pieces(input_image, svg_file, output_folder, prefix="piece", format="png", 
+                         padding=30, fixed_size=False, output_width=None, output_height=None, debug=False):
+    """Extract puzzle pieces by applying four cuts to each piece position"""
+    
+    # Create output directory
+    os.makedirs(output_folder, exist_ok=True)
+    
+    # Create temp directory
+    temp_dir = tempfile.mkdtemp()
+    debug_dir = os.path.join(output_folder, "debug") if debug else None
+    
+    if debug:
+        os.makedirs(debug_dir, exist_ok=True)
+    
+    try:
+        # Determine grid size
+        cols, rows, svg_width, svg_height = determine_grid_size(svg_file)
+        print(f"Detected puzzle grid: {cols} columns x {rows} rows")
+        
+        # Open input image
+        input_img = Image.open(input_image)
+        img_width, img_height = input_img.size
+        
+        # Convert input image to RGBA if it's not already
+        if input_img.mode != 'RGBA':
+            input_img = input_img.convert('RGBA')
+        
+        # Calculate cell dimensions in pixels
+        cell_width = img_width / cols
+        cell_height = img_height / rows
+        
+        # Create a master allocation map to track which pixels have already been assigned
+        # This ensures no pixel is assigned to more than one piece
+        allocation_map = np.zeros((img_height, img_width), dtype=np.uint8)
+        
+        # Variables to track the max piece dimensions for fixed_size output
+        max_piece_width = 0
+        max_piece_height = 0
+        piece_bboxes = {}
+        piece_images = {}
+        
+        # First pass: Create all piece masks without saving pieces
+        piece_masks = {}
+        for row in range(rows):
+            for col in range(cols):
+                print(f"Processing piece mask at position ({row}, {col})")
+                
+                # Create cut masks for this piece
+                cut_masks = create_cut_masks(svg_file, temp_dir, row, col, rows, cols, 
+                                           img_width, img_height, debug)
+                
+                # Create a mask for this piece that starts with all white (255)
+                piece_mask = np.ones((img_height, img_width), dtype=np.uint8) * 255
+                
+                # Apply each cut mask
+                for direction, mask_path in cut_masks.items():
+                    # Load the cut mask
+                    cut_mask = Image.open(mask_path).convert('L')
+                    cut_array = np.array(cut_mask)
+                    
+                    # Threshold to ensure clean black/white
+                    cut_array = (cut_array > 128).astype(np.uint8) * 255
+                    
+                    # Create a binary mask for the black pixels (the cut line)
+                    cut_line = (cut_array == 0)
+                    
+                    # For each cut, we need to determine which side to keep
+                    # and which side to discard
+                    if direction == 'above':
+                        # Keep pixels below the cut
+                        discard_pixels = np.zeros_like(cut_line)
+                        for x in range(img_width):
+                            # Find the first black pixel (cut line) from top to bottom
+                            cut_point = None
+                            for y in range(img_height):
+                                if cut_line[y, x]:
+                                    cut_point = y
+                                    break
+                            
+                            if cut_point is not None:
+                                # Discard all pixels above the cut
+                                discard_pixels[:cut_point, x] = True
+                        
+                        # Set discarded pixels to 0 in the piece mask
+                        piece_mask[discard_pixels] = 0
+                    
+                    elif direction == 'below':
+                        # Keep pixels above the cut
+                        discard_pixels = np.zeros_like(cut_line)
+                        for x in range(img_width):
+                            # Find the first black pixel (cut line) from bottom to top
+                            cut_points = []
+                            for y in range(img_height - 1, -1, -1):
+                                if cut_line[y, x]:
+                                    cut_points.append(y)
+                            
+                            if cut_points:
+                                # Use the topmost cut point
+                                cut_point = min(cut_points)
+                                # Discard all pixels below the cut
+                                discard_pixels[cut_point:, x] = True
+                        
+                        # Set discarded pixels to 0 in the piece mask
+                        piece_mask[discard_pixels] = 0
+                    
+                    elif direction == 'left':
+                        # Keep pixels to the right of the cut
+                        discard_pixels = np.zeros_like(cut_line)
+                        for y in range(img_height):
+                            # Find the first black pixel (cut line) from left to right
+                            cut_point = None
+                            for x in range(img_width):
+                                if cut_line[y, x]:
+                                    cut_point = x
+                                    break
+                            
+                            if cut_point is not None:
+                                # Discard all pixels to the left of the cut
+                                discard_pixels[y, :cut_point] = True
+                        
+                        # Set discarded pixels to 0 in the piece mask
+                        piece_mask[discard_pixels] = 0
+                    
+                    elif direction == 'right':
+                        # Keep pixels to the left of the cut
+                        discard_pixels = np.zeros_like(cut_line)
+                        for y in range(img_height):
+                            # Find the first black pixel (cut line) from right to left
+                            cut_point = None
+                            for x in range(img_width - 1, -1, -1):
+                                if cut_line[y, x]:
+                                    cut_point = x
+                                    break
+                            
+                            if cut_point is not None:
+                                # Discard all pixels to the right of the cut
+                                discard_pixels[y, cut_point:] = True
+                        
+                        # Set discarded pixels to 0 in the piece mask
+                        piece_mask[discard_pixels] = 0
+                    
+                    elif direction == 'border':
+                        # For border pieces, handle each edge separately
+                        if row == 0:  # Top edge
+                            # Keep pixels below the border
+                            for x in range(img_width):
+                                # Find the first black pixel (border) from top to bottom
+                                border_points = []
+                                for y in range(img_height):
+                                    if cut_line[y, x]:
+                                        border_points.append(y)
+                                
+                                if border_points:
+                                    # Use the bottommost point to avoid cutting too much
+                                    border_point = max(border_points)
+                                    # Discard all pixels above the border
+                                    piece_mask[:border_point, x] = 0
+                        
+                        if row == rows - 1:  # Bottom edge
+                            # For bottom edge, we need to keep a large part of the image below
+                            # Just to ensure we're not accidentally removing the piece content,
+                            # we'll only remove a few pixels at the very bottom of the image
+                            piece_mask[-5:, :] = 0
+                        
+                        if col == 0:  # Left edge
+                            # For left edge, just remove a few pixels at the very left of the image
+                            # This ensures we don't accidentally remove the piece content
+                            piece_mask[:, :5] = 0
+                        
+                        if col == cols - 1:  # Right edge
+                            # For right edge, similarly ensure we're not removing the piece content
+                            # Just remove a few pixels at the very right of the image
+                            piece_mask[:, -5:] = 0
+                
+                # Store the mask for this piece
+                piece_masks[(row, col)] = piece_mask
+        
+        # Second pass: Apply allocation rules to prevent overlapping pieces
+        # Process pieces in a specific order (e.g., top-to-bottom, left-to-right)
+        # to consistently assign boundary pixels
+        for row in range(rows):
+            for col in range(cols):
+                current_mask = piece_masks[(row, col)]
+                
+                # For pixels that are claimed by this piece (mask value > 0)
+                # only keep them if they haven't been allocated to another piece yet
+                valid_pixels = (current_mask > 0) & (allocation_map == 0)
+                
+                # Create the final mask for this piece
+                final_mask = np.zeros_like(current_mask)
+                final_mask[valid_pixels] = 255
+                
+                # Update the allocation map to mark these pixels as allocated
+                allocation_map[valid_pixels] = 1
+                
+                # Convert the numpy mask to PIL image
+                final_mask_img = Image.fromarray(final_mask)
+                
+                # Save the mask for debugging
+                if debug:
+                    final_mask_img.save(os.path.join(debug_dir, f"piece_mask_{row}_{col}.png"))
+                
+                # Apply the mask to the input image
+                piece_img = Image.new('RGBA', input_img.size, (0, 0, 0, 0))
+                piece_img.paste(input_img, (0, 0), final_mask_img)
+                
+                # Find the bounding box of non-transparent pixels
+                bbox = piece_img.getbbox()
+                
+                if bbox:
+                    # Add padding
+                    bbox = (
+                        max(0, bbox[0] - padding),
+                        max(0, bbox[1] - padding),
+                        min(img_width, bbox[2] + padding),
+                        min(img_height, bbox[3] + padding)
+                    )
+                    # Store the bounding box for later processing
+                    piece_bboxes[(row, col)] = bbox
+                    
+                    # Crop the piece and store it
+                    cropped_piece = piece_img.crop(bbox)
+                    piece_images[(row, col)] = cropped_piece
+                    
+                    # Update maximum dimensions
+                    max_piece_width = max(max_piece_width, cropped_piece.width)
+                    max_piece_height = max(max_piece_height, cropped_piece.height)
+                
+        # If fixed size is requested, use specified dimensions or calculate based on max piece size
+        if fixed_size:
+            if output_width is None:
+                output_width = max_piece_width
+            if output_height is None:
+                output_height = max_piece_height
+            
+            print(f"Using fixed output dimensions: {output_width}x{output_height}")
+        
+        # Save all pieces with proper centering if needed
+        for row in range(rows):
+            for col in range(cols):
+                if (row, col) in piece_images:
+                    piece_img = piece_images[(row, col)]
+                    
+                    # Apply fixed size and centering if requested
+                    if fixed_size:
+                        piece_img = center_and_resize_image(piece_img, output_width, output_height)
+                    
+                    # Save the final piece
+                    output_path = os.path.join(output_folder, f"{prefix}_{row:02d}_{col:02d}.{format}")
+                    piece_img.save(output_path)
+                    
+                    print(f"Created piece {row+1},{col+1} at {output_path}")
+        
+        # Optional: Check if the allocation map has any unallocated pixels that should have been allocated
+        if debug:
+            # Save the allocation map for debugging
+            allocation_img = Image.fromarray(allocation_map * 255)
+            allocation_img.save(os.path.join(debug_dir, "allocation_map.png"))
+        
+        print(f"Successfully extracted {rows*cols} puzzle pieces to {output_folder}")
+        
+    except Exception as e:
+        print(f"Error extracting puzzle pieces: {e}")
+        import traceback
+        traceback.print_exc()
+        # Keep debug files if there was an error
+        debug = True
+    
+    finally:
+        # Clean up temp files unless debug is True
+        if not debug:
+            shutil.rmtree(temp_dir)
+        else:
+            print(f"Debug files saved to {debug_dir if debug_dir else temp_dir}")
+
+def main():
+    args = parse_arguments()
+    extract_puzzle_pieces(args.image, args.svg, args.output, 
+                        args.prefix, args.format, args.padding, 
+                        args.fixed_size, args.output_width, args.output_height,
+                        args.debug)
+
+if __name__ == "__main__":
+    main()```
+    
+ADDITIONAL IMPORTANT POINTS:
+
+1) yes that is the exact mathematical definition I wanted to express.   
+
+2) I am suggesting the SVG approach as a shortcut because the regions defined in the svg are bounded by bezier curves so mapping that to pixels might result in a loss of precision, the intersection points are the points we are interested in.    I should add that the intersection point of the top left corner piece, as are all corner pieces, exceptions in that they are the intersections of the implied straight cuts at the edges of the graph.  
+
+3) the intent of the solution.json is to map the piece coordinates back to the location where the piece was extracted (relative to the handle pixel in each piece)  this will make reassembly of the original image from the set of pieces easier.   
+
+4) I wish to maintain the existing structure of the puzzle pack format defined above, and also the current script respects this format already.
+
+5) I do not wish to change the way I am extracting the PNG pieces of the puzzle, I merely want to add the concept of the pixel handle as a standard way of expressing as a vector the location where the puzzle should be placed in order to solve it, and to produce the solution.json file as a reference for easy reassembly of the original image from the set of pieces.
+
+
