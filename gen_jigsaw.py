@@ -218,8 +218,8 @@ def main():
                         help='Random seed (default: random)')
     parser.add_argument('--width', type=int, default=300,
                         help='Width in mm (default: 300)')
-    parser.add_argument('--height', type=int, default=200,
-                        help='Height in mm (default: 200)')
+    parser.add_argument('--height', type=int, default=300,
+                        help='Height in mm (default: 300)')
     parser.add_argument('--radius', type=float, default=2.0,
                         help='Corner radius in mm (default: 2.0)')
     
