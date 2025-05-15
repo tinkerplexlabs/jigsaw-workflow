@@ -186,17 +186,17 @@ class JigsawGenerator:
                f'viewBox="0 0 {self.width} {self.height}">')
         
         # Horizontal dividers
-        svg += (f'<path fill="none" stroke="Black" stroke-width="1.0" d="'
+        svg += (f'<path fill="none" stroke="Black" stroke-width="0.1" d="'
                 f'{self.gen_dh()}'
                 f'"></path>')
         
         # Vertical dividers
-        svg += (f'<path fill="none" stroke="Black" stroke-width="1.0" d="'
+        svg += (f'<path fill="none" stroke="Black" stroke-width="0.1" d="'
                 f'{self.gen_dv()}'
                 f'"></path>')
         
         # Border
-        svg += (f'<path fill="none" stroke="Black" stroke-width="1.0" d="'
+        svg += (f'<path fill="none" stroke="Black" stroke-width="0.1" d="'
                 f'{self.gen_db()}'
                 f'"></path>')
         
