@@ -345,66 +345,6 @@ def center_and_resize_image(image, target_width, target_height):
     
     return new_image
 
-def find_corner_pixel(piece_img, row=None, col=None, rows=None, cols=None, debug_output=False):
-    """
-    Find the handle pixel of a piece - the non-transparent pixel with the least
-    Euclidean distance from the top-left corner of the image.
-    
-    This is the IMPROVED version that ensures consistency across all pieces.
-    """
-    # Convert piece to numpy array
-    piece_array = np.array(piece_img)
-    
-    # Get alpha channel (transparency)
-    alpha = piece_array[:, :, 3]
-    
-    # No non-transparent pixels
-    if np.sum(alpha > 0) == 0:
-        return None
-    
-    # Create a binary mask of non-transparent pixels
-    mask = (alpha > 0).astype(np.uint8)
-    
-    # Get coordinates of all non-transparent pixels
-    y_coords, x_coords = np.where(mask > 0)
-    
-    # Calculate Euclidean distance from top-left corner (0,0)
-    # Use float64 for higher precision to avoid rounding errors
-    distances = np.sqrt(np.power(x_coords.astype(np.float64), 2) + 
-                       np.power(y_coords.astype(np.float64), 2))
-    
-    # Find the pixel with minimum distance
-    min_idx = np.argmin(distances)
-    
-    if debug_output:
-        print(f"Total non-transparent pixels: {len(y_coords)}")
-        print(f"Closest pixel to origin: ({y_coords[min_idx]}, {x_coords[min_idx]}) - distance: {distances[min_idx]:.6f}")
-    
-    return (y_coords[min_idx], x_coords[min_idx])
-
-def find_handle_pixel_from_svg(svg_file, row, col, rows, cols, img_width, img_height):
-    """Find handle pixel coordinates from SVG grid intersections"""
-    try:
-        # Get SVG dimensions
-        svg_width, svg_height = get_svg_dimensions(svg_file)
-        
-        # Calculate cell dimensions in SVG units
-        cell_width = svg_width / cols
-        cell_height = svg_height / rows
-        
-        # Calculate cell corner in SVG units
-        svg_x = col * cell_width
-        svg_y = row * cell_height
-        
-        # Scale to image dimensions
-        img_x = int(svg_x * img_width / svg_width)
-        img_y = int(svg_y * img_height / svg_height)
-        
-        return (img_y, img_x)  # Return as (y, x) to match numpy convention
-    except Exception as e:
-        print(f"Error finding handle pixel from SVG: {e}")
-        return None
-
 def ensure_centered_piece(piece_img, padding=30):
     """
     Ensure the piece is centered within its PNG image.
@@ -432,8 +372,9 @@ def ensure_centered_piece(piece_img, padding=30):
     
     return centered
 
+# This is the key function that needs to change
 def extract_puzzle_pieces(input_image, svg_file, output_folder, prefix="piece", format="png", 
-                         padding=30, fixed_size=False, output_width=None, output_height=None, 
+                         padding=0, fixed_size=True, output_width=None, output_height=None, 
                          debug=False, puzzle_name="puzzle_01", layout_name=None, show_handles=False):
     """Extract puzzle pieces by applying four cuts to each piece position"""
     
@@ -492,28 +433,17 @@ def extract_puzzle_pieces(input_image, svg_file, output_folder, prefix="piece", 
         cell_width = img_width / cols
         cell_height = img_height / rows
         
-        # Create a master allocation map to track which pixels have already been assigned
-        # This ensures no pixel is assigned to more than one piece
-        allocation_map = np.zeros((img_height, img_width), dtype=np.uint8)
-        
-        # Variables to track the max piece dimensions for fixed_size output
-        max_piece_width = 0
-        max_piece_height = 0
-        piece_bboxes = {}
-        piece_images = {}
-        solution_data = {}
-        
-        # First pass: Create all piece masks without saving pieces
-        piece_masks = {}
+        # IMPORTANT: Process all pieces independently without the allocation map
+        # This ensures each piece gets its correct shape, even if they overlap
         for row in range(rows):
             for col in range(cols):
-                print(f"Processing piece mask at position ({row}, {col})")
+                print(f"Processing piece at position ({row}, {col})")
                 
                 # Create cut masks for this piece
                 cut_masks = create_cut_masks(svg_file, temp_dir, row, col, rows, cols, 
-                                           img_width, img_height, debug)
+                                          img_width, img_height, debug)
                 
-                # Create a mask for this piece that starts with all white (255)
+                # Start with a full white mask
                 piece_mask = np.ones((img_height, img_width), dtype=np.uint8) * 255
                 
                 # Apply each cut mask
@@ -651,274 +581,74 @@ def extract_puzzle_pieces(input_image, svg_file, output_folder, prefix="piece", 
                             # For right edge, just remove a few pixels at the right
                             piece_mask[:, -5:] = 0
                 
-                # Save intermediate mask for debugging
-                if debug and row == 0:  # Extra debug for row 0
-                    mask_img = Image.fromarray(piece_mask)
-                    mask_img.save(os.path.join(debug_dir, f"intermediate_mask_{row}_{col}.png"))
-                
-                # Store the mask for this piece
-                piece_masks[(row, col)] = piece_mask
-        
-        # Second pass: Apply allocation rules to prevent overlapping pieces
-        # Process pieces in a specific order (e.g., top-to-bottom, left-to-right)
-        # to consistently assign boundary pixels
-        for row in range(rows):
-            for col in range(cols):
-                current_mask = piece_masks[(row, col)]
-                
-                # For pixels that are claimed by this piece (mask value > 0)
-                # only keep them if they haven't been allocated to another piece yet
-                valid_pixels = (current_mask > 0) & (allocation_map == 0)
-                
-                # Create the final mask for this piece
-                final_mask = np.zeros_like(current_mask)
-                final_mask[valid_pixels] = 255
-                
-                # For top row pieces, make an extra check to ensure we're not losing them
+                # IMPORTANT: Special check for top row pieces
                 if row == 0:
                     # Make sure there are some non-zero pixels in the mask
-                    if np.sum(final_mask) == 0:
+                    if np.sum(piece_mask) == 0:
                         print(f"WARNING: No non-zero pixels in mask for top row piece ({row}, {col})")
-                        # Force allocation of some pixels in this piece's cell area
+                        # Force some pixels in this piece's cell area
                         start_y = int(row * cell_height)
                         end_y = int((row + 1) * cell_height)
                         start_x = int(col * cell_width)
                         end_x = int((col + 1) * cell_width)
                         
-                        # Create a safety mask for this cell
-                        safety_mask = np.zeros_like(final_mask)
-                        safety_mask[start_y:end_y, start_x:end_x] = 255
+                        # Create a mask for this cell
+                        cell_mask = np.zeros_like(piece_mask)
+                        cell_mask[start_y:end_y, start_x:end_x] = 255
                         
-                        # Only keep pixels that haven't been allocated yet
-                        safety_pixels = (safety_mask > 0) & (allocation_map == 0)
-                        final_mask[safety_pixels] = 255
+                        # Use this as the piece mask
+                        piece_mask = cell_mask
                 
-                # Update the allocation map to mark these pixels as allocated
-                allocation_map[final_mask > 0] = 1
+                # Convert mask to PIL
+                mask_img = Image.fromarray(piece_mask)
                 
-                # Convert the numpy mask to PIL image
-                final_mask_img = Image.fromarray(final_mask)
-                
-                # Save the mask for debugging
+                # Save mask for debugging
                 if debug:
-                    final_mask_img.save(os.path.join(debug_dir, f"piece_mask_{row}_{col}.png"))
+                    mask_img.save(os.path.join(debug_dir, f"piece_mask_{row}_{col}.png"))
                 
-                # Apply the mask to the input image
+                # Create the piece by applying the mask to the input image
                 piece_img = Image.new('RGBA', input_img.size, (0, 0, 0, 0))
-                piece_img.paste(input_img, (0, 0), final_mask_img)
+                piece_img.paste(input_img, (0, 0), mask_img)
                 
-                # Save full-sized piece for debugging top row
-                if debug and row == 0:
-                    piece_img.save(os.path.join(debug_dir, f"full_piece_{row}_{col}.png"))
-                
-                # Find the bounding box of non-transparent pixels
+                # Find the bounding box to see if we got a valid piece
                 bbox = piece_img.getbbox()
+                if not bbox:
+                    print(f"WARNING: Piece {row}_{col} is empty! Creating a fallback.")
+                    # Create a small fallback piece
+                    start_y = int(row * cell_height)
+                    end_y = int((row + 1) * cell_height)
+                    start_x = int(col * cell_width)
+                    end_x = int((col + 1) * cell_width)
+                    
+                    # Create a small square mask in the cell area
+                    fallback_mask = np.zeros((img_height, img_width), dtype=np.uint8)
+                    center_y = (start_y + end_y) // 2
+                    center_x = (start_x + end_x) // 2
+                    size = min(cell_width, cell_height) // 4
+                    y1, y2 = max(0, int(center_y - size)), min(img_height, int(center_y + size))
+                    x1, x2 = max(0, int(center_x - size)), min(img_width, int(center_x + size))
+                    fallback_mask[y1:y2, x1:x2] = 255
+                    
+                    # Create the fallback piece
+                    fallback_mask_img = Image.fromarray(fallback_mask)
+                    piece_img = Image.new('RGBA', input_img.size, (0, 0, 0, 0))
+                    piece_img.paste(input_img, (0, 0), fallback_mask_img)
                 
-                # Debug output for bounding box detection
-                print(f"Row {row}, Col {col} - bbox: {bbox}")
+                # Save the full-sized piece
+                output_path = os.path.join(pieces_dir, f"{row}_{col}.png")
+                piece_img.save(output_path)
                 
-                if bbox:
-                    # Add padding
-                    bbox = (
-                        max(0, bbox[0] - padding),
-                        max(0, bbox[1] - padding),
-                        min(img_width, bbox[2] + padding),
-                        min(img_height, bbox[3] + padding)
-                    )
-                    # Store the bounding box for later processing
-                    piece_bboxes[(row, col)] = bbox
-                    
-                    # Crop the piece and store it
-                    cropped_piece = piece_img.crop(bbox)
-                    
-                    # Ensure the piece is properly centered
-                    centered_piece = ensure_centered_piece(cropped_piece, padding)
-                    piece_images[(row, col)] = centered_piece
-                    
-                    # Update maximum dimensions
-                    max_piece_width = max(max_piece_width, centered_piece.width)
-                    max_piece_height = max(max_piece_height, centered_piece.height)
-                else:
-                    print(f"WARNING: No bounding box found for piece at row {row}, col {col}")
-                    
-                    # For top row pieces, if no bbox is found, create a fallback piece
-                    if row == 0:
-                        # Calculate cell boundaries
-                        start_x = int(col * cell_width)
-                        end_x = int((col + 1) * cell_width)
-                        start_y = int(row * cell_height)
-                        end_y = int((row + 1) * cell_height)
-                        
-                        # Add padding
-                        bbox = (
-                            max(0, start_x - padding),
-                            max(0, start_y - padding),
-                            min(img_width, end_x + padding),
-                            min(img_height, end_y + padding)
-                        )
-                        
-                        # Crop a fallback piece from the original image
-                        fallback_piece = input_img.crop(bbox)
-                        
-                        # Center the piece
-                        centered_fallback = ensure_centered_piece(fallback_piece, padding)
-                        
-                        # Store the bbox and piece
-                        piece_bboxes[(row, col)] = bbox
-                        piece_images[(row, col)] = centered_fallback
-                        
-                        # Update maximum dimensions
-                        max_piece_width = max(max_piece_width, centered_fallback.width)
-                        max_piece_height = max(max_piece_height, centered_fallback.height)
-                        
-                        print(f"Created fallback piece for {row},{col}")
+                print(f"Created piece {row},{col} at {output_path}")
         
-        # If fixed size is requested, use specified dimensions or calculate based on max piece size
-        if fixed_size:
-            if output_width is None:
-                output_width = max_piece_width
-            if output_height is None:
-                output_height = max_piece_height
-            
-            print(f"Using fixed output dimensions: {output_width}x{output_height}")
-        
-        # Calculate handle pixels and create solution data
+        # Create solution.json - Each piece has row and column info
+        solution_data = {}
         for row in range(rows):
             for col in range(cols):
-                if (row, col) in piece_images:
-                    piece_img = piece_images[(row, col)]
-                    piece_key = f"{row}_{col}"
-                    
-                    # Special debug for specific pieces
-                    debug_this_piece = (row == 1 and col == 0) or (row == 0 and col == 2)
-                    
-                    if debug or debug_this_piece:
-                        print(f"\n{'='*50}")
-                        print(f"DETAILED DEBUG FOR PIECE {row}_{col}")
-                        print(f"{'='*50}")
-                        print(f"Piece dimensions: {piece_img.width}x{piece_img.height}")
-                        
-                        # Save the piece as a separate file for inspection
-                        debug_piece_path = os.path.join(debug_dir, f"piece_{row}_{col}_raw.png")
-                        piece_img.save(debug_piece_path)
-                        print(f"Raw piece saved to: {debug_piece_path}")
-                    
-                    # Find handle pixel from SVG intersections
-                    svg_handle = find_handle_pixel_from_svg(svg_file, row, col, rows, cols, img_width, img_height)
-                    
-                    # Find corner pixel using our improved corner detection
-                    # This is the key fix: ensure we are consistently finding the handle pixel
-                    # closest to the top-left corner
-                    handle_in_piece = find_corner_pixel(piece_img, row=row, col=col, rows=rows, cols=cols, 
-                                                      debug_output=(debug or debug_this_piece))
-                    
-                    if debug or debug_this_piece:
-                        print(f"SVG handle: {svg_handle}")
-                        print(f"Corner pixel: {handle_in_piece}")
-                        
-                        # Save piece with handle marked
-                        debug_piece = piece_img.copy()
-                        draw = ImageDraw.Draw(debug_piece)
-                        
-                        if handle_in_piece:
-                            y, x = handle_in_piece
-                            draw.ellipse((x-3, y-3, x+3, y+3), fill=(255, 0, 0, 255))
-                        
-                        debug_path = os.path.join(debug_dir, f"debug_handle_{row}_{col}.png")
-                        debug_piece.save(debug_path)
-                        print(f"Piece with debug handle saved to: {debug_path}")
-                    
-                    if svg_handle and handle_in_piece:
-                        # Calculate the offset from the original position
-                        # Original position (in the full image)
-                        orig_y, orig_x = svg_handle
-                        
-                        # Position in the cropped piece
-                        piece_y, piece_x = handle_in_piece
-                        
-                        # Adjust for the crop bounding box
-                        bbox = piece_bboxes[(row, col)]
-                        
-                        if debug or debug_this_piece:
-                            print(f"Bounding box: {bbox}")
-                            print(f"Orig position: ({orig_x}, {orig_y})")
-                            print(f"Piece position: ({piece_x}, {piece_y})")
-                            print(f"Calculated offset: ({orig_x - piece_x - bbox[0]}, {orig_y - piece_y - bbox[1]})")
-                        
-                        # Store solution data - convert NumPy types to native Python types
-                        solution_data[piece_key] = {
-                            "row": int(row),
-                            "col": int(col),
-                            "x": int(orig_x),  # Original x coordinate in the full image
-                            "y": int(orig_y),  # Original y coordinate in the full image
-                            "handle_x": int(piece_x),  # Handle x coordinate in the piece image
-                            "handle_y": int(piece_y),  # Handle y coordinate in the piece image
-                            "offset_x": int(orig_x - piece_x - bbox[0]),  # x offset to place piece correctly
-                            "offset_y": int(orig_y - piece_y - bbox[1])   # y offset to place piece correctly
-                        }
-                    else:
-                        # If handle pixel detection failed, use grid-based approach
-                        # Calculate grid-based handle position
-                        grid_handle_x = int(cell_width / 2)
-                        grid_handle_y = int(cell_height / 2)
-                        
-                        # Calculate original position in full image
-                        orig_x = int(col * cell_width + grid_handle_x)
-                        orig_y = int(row * cell_height + grid_handle_y)
-                        
-                        # Calculate position in piece image based on bounding box
-                        bbox = piece_bboxes[(row, col)]
-                        piece_x = grid_handle_x - (bbox[0] - int(col * cell_width))
-                        piece_y = grid_handle_y - (bbox[1] - int(row * cell_height))
-                        
-                        # Ensure handle is within the piece bounds
-                        piece_x = max(0, min(piece_x, piece_img.width - 1))
-                        piece_y = max(0, min(piece_y, piece_img.height - 1))
-                        
-                        # Store solution data - convert NumPy types to native Python types
-                        solution_data[piece_key] = {
-                            "row": int(row),
-                            "col": int(col),
-                            "x": int(orig_x),
-                            "y": int(orig_y),
-                            "handle_x": int(piece_x),
-                            "handle_y": int(piece_y),
-                            "offset_x": int(orig_x - piece_x - bbox[0]),
-                            "offset_y": int(orig_y - piece_y - bbox[1])
-                        }
-                    
-                    # Draw handle pixels on pieces if requested
-                    if show_handles:
-                        handle_x = solution_data[piece_key]["handle_x"]
-                        handle_y = solution_data[piece_key]["handle_y"]
-                        
-                        # Create a crosshair at the handle pixel
-                        draw = ImageDraw.Draw(piece_img)
-                        
-                        # Crosshair size
-                        size = 5
-                        
-                        # Draw horizontal line
-                        draw.line((handle_x - size, handle_y, handle_x + size, handle_y), 
-                                fill=(255, 0, 0, 255), width=1)
-                        
-                        # Draw vertical line
-                        draw.line((handle_x, handle_y - size, handle_x, handle_y + size), 
-                                fill=(255, 0, 0, 255), width=1)
-                        
-                        # Also add a small circle at the center
-                        draw.ellipse((handle_x - 2, handle_y - 2, handle_x + 2, handle_y + 2), 
-                                   fill=(255, 0, 0, 255))
-                    
-                    # Apply fixed size and centering if requested
-                    if fixed_size:
-                        piece_img = center_and_resize_image(piece_img, output_width, output_height)
-                    
-                    # Save the final piece
-                    output_path = os.path.join(pieces_dir, f"{row}_{col}.{format}")
-                    piece_img.save(output_path)
-                    
-                    print(f"Created piece {row},{col} at {output_path}")
+                piece_key = f"{row}_{col}"
+                solution_data[piece_key] = {
+                    "row": int(row),
+                    "col": int(col)
+                }
         
         # Save solution data as JSON
         solution_path = os.path.join(pieces_dir, "solution.json")
@@ -936,17 +666,15 @@ def extract_puzzle_pieces(input_image, svg_file, output_folder, prefix="piece", 
                 "rows": rows,
                 "cols": cols
             },
+            "image_dimensions": {
+                "width": img_width,
+                "height": img_height
+            },
             "created_at": os.path.basename(input_image)
         }
         
         with open(os.path.join(puzzle_dir, "manifest.json"), 'w') as f:
             json.dump(manifest, f, indent=2)
-        
-        # Optional: Check if the allocation map has any unallocated pixels that should have been allocated
-        if debug:
-            # Save the allocation map for debugging
-            allocation_img = Image.fromarray(allocation_map * 255)
-            allocation_img.save(os.path.join(debug_dir, "allocation_map.png"))
         
         print(f"Successfully extracted {rows*cols} puzzle pieces to {pieces_dir}")
         
@@ -954,7 +682,6 @@ def extract_puzzle_pieces(input_image, svg_file, output_folder, prefix="piece", 
         print(f"Error extracting puzzle pieces: {e}")
         import traceback
         traceback.print_exc()
-        # Keep debug files if there was an error
         debug = True
     
     finally:
@@ -963,7 +690,7 @@ def extract_puzzle_pieces(input_image, svg_file, output_folder, prefix="piece", 
             shutil.rmtree(temp_dir)
         else:
             print(f"Debug files saved to {debug_dir if debug_dir else temp_dir}")
-
+                        
 def main():
     args = parse_arguments()
     
@@ -977,7 +704,7 @@ def main():
         cols, rows, _, _ = determine_grid_size(args.svg)
         layout_name = f"{cols}x{rows}"
     
-    # Extract puzzle pieces with handle pixel calculation and solution.json generation
+    # Extract puzzle pieces with bounding box based positioning
     extract_puzzle_pieces(
         args.image, args.svg, output_folder, 
         args.prefix, args.format, args.padding, 
