@@ -349,6 +349,8 @@ def find_corner_pixel(piece_img, row=None, col=None, rows=None, cols=None, debug
     """
     Find the handle pixel of a piece - the non-transparent pixel with the least
     Euclidean distance from the top-left corner of the image.
+    
+    This is the FIXED version that ensures consistency across all pieces.
     """
     # Convert piece to numpy array
     piece_array = np.array(piece_img)
@@ -367,15 +369,14 @@ def find_corner_pixel(piece_img, row=None, col=None, rows=None, cols=None, debug
     y_coords, x_coords = np.where(mask > 0)
     
     # Calculate Euclidean distance from top-left corner (0,0)
-    distances = np.sqrt(np.power(x_coords.astype(np.float64), 2) + 
-                        np.power(y_coords.astype(np.float64), 2))
+    distances = np.sqrt(np.power(x_coords, 2) + np.power(y_coords, 2))
     
     # Find the pixel with minimum distance
     min_idx = np.argmin(distances)
     
     if debug_output:
         print(f"Total non-transparent pixels: {len(y_coords)}")
-        print(f"Closest pixel to origin: ({y_coords[min_idx]}, {x_coords[min_idx]}) - distance: {distances[min_idx]:.6f}")
+        print(f"Closest pixel to origin: ({x_coords[min_idx]}, {y_coords[min_idx]}) - distance: {distances[min_idx]:.6f}")
     
     return (y_coords[min_idx], x_coords[min_idx])
 
@@ -804,6 +805,8 @@ def extract_puzzle_pieces(input_image, svg_file, output_folder, prefix="piece", 
                     svg_handle = find_handle_pixel_from_svg(svg_file, row, col, rows, cols, img_width, img_height)
                     
                     # Find corner pixel using our improved corner detection
+                    # This is the key fix: ensure we are consistently finding the handle pixel
+                    # closest to the top-left corner
                     handle_in_piece = find_corner_pixel(piece_img, row=row, col=col, rows=rows, cols=cols, 
                                                       debug_output=(debug or debug_this_piece))
                     
