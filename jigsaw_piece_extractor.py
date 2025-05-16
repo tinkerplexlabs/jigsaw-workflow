@@ -43,6 +43,9 @@ def parse_arguments():
                         help='Name of the puzzle folder (default: puzzle_01)')
     parser.add_argument('--layout-name', type=str, default=None,
                         help='Name of the layout folder (default: derived from grid size)')
+    parser.add_argument('--show-handles', action='store_true',
+                        help='Draw a red crosshair on each piece at the handle pixel location')
+
     return parser.parse_args()
 
 def get_svg_dimensions(svg_file):
@@ -342,29 +345,39 @@ def center_and_resize_image(image, target_width, target_height):
     
     return new_image
 
-def find_handle_pixel(piece_img):
-    """Find the handle pixel of a piece - the non-transparent pixel closest to the top-left corner"""
+def find_corner_pixel(piece_img, row=None, col=None, rows=None, cols=None, debug_output=False):
+    """
+    Find the handle pixel of a piece - the non-transparent pixel with the least
+    Euclidean distance from the top-left corner of the image.
+    """
     # Convert piece to numpy array
     piece_array = np.array(piece_img)
     
     # Get alpha channel (transparency)
     alpha = piece_array[:, :, 3]
     
-    # Find all non-transparent pixels (alpha > 0)
-    non_transparent = np.column_stack(np.where(alpha > 0))
-    
-    if len(non_transparent) == 0:
-        # No non-transparent pixels found
+    # No non-transparent pixels
+    if np.sum(alpha > 0) == 0:
         return None
     
-    # Calculate Euclidean distance from top-left corner (0,0)
-    distances = np.sqrt(non_transparent[:, 0]**2 + non_transparent[:, 1]**2)
+    # Create a binary mask of non-transparent pixels
+    mask = (alpha > 0).astype(np.uint8)
     
-    # Find index of the minimum distance
+    # Get coordinates of all non-transparent pixels
+    y_coords, x_coords = np.where(mask > 0)
+    
+    # Calculate Euclidean distance from top-left corner (0,0)
+    distances = np.sqrt(np.power(x_coords.astype(np.float64), 2) + 
+                        np.power(y_coords.astype(np.float64), 2))
+    
+    # Find the pixel with minimum distance
     min_idx = np.argmin(distances)
     
-    # Return the handle pixel coordinates (y, x)
-    return tuple(non_transparent[min_idx])
+    if debug_output:
+        print(f"Total non-transparent pixels: {len(y_coords)}")
+        print(f"Closest pixel to origin: ({y_coords[min_idx]}, {x_coords[min_idx]}) - distance: {distances[min_idx]:.6f}")
+    
+    return (y_coords[min_idx], x_coords[min_idx])
 
 def find_handle_pixel_from_svg(svg_file, row, col, rows, cols, img_width, img_height):
     """Find handle pixel coordinates from SVG grid intersections"""
@@ -389,9 +402,36 @@ def find_handle_pixel_from_svg(svg_file, row, col, rows, cols, img_width, img_he
         print(f"Error finding handle pixel from SVG: {e}")
         return None
 
+def ensure_centered_piece(piece_img, padding=30):
+    """
+    Ensure the piece is centered within its PNG image.
+    Adds padding and centers the piece.
+    """
+    # Find the bounding box of non-transparent pixels
+    bbox = piece_img.getbbox()
+    if not bbox:
+        return piece_img  # Return original if no bounding box
+    
+    # Crop to the bounding box
+    cropped = piece_img.crop(bbox)
+    
+    # Calculate dimensions for the new centered image
+    width = bbox[2] - bbox[0] + (padding * 2)
+    height = bbox[3] - bbox[1] + (padding * 2)
+    
+    # Create a new transparent image
+    centered = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+    
+    # Paste the cropped piece in the center
+    paste_x = padding
+    paste_y = padding
+    centered.paste(cropped, (paste_x, paste_y))
+    
+    return centered
+
 def extract_puzzle_pieces(input_image, svg_file, output_folder, prefix="piece", format="png", 
                          padding=30, fixed_size=False, output_width=None, output_height=None, 
-                         debug=False, puzzle_name="puzzle_01", layout_name=None):
+                         debug=False, puzzle_name="puzzle_01", layout_name=None, show_handles=False):
     """Extract puzzle pieces by applying four cuts to each piece position"""
     
     # Create output directory
@@ -402,6 +442,10 @@ def extract_puzzle_pieces(input_image, svg_file, output_folder, prefix="piece", 
     debug_dir = os.path.join(output_folder, "debug") if debug else None
     
     if debug:
+        os.makedirs(debug_dir, exist_ok=True)
+    else:
+        # Always create debug dir for special pieces
+        debug_dir = os.path.join(temp_dir, "debug")
         os.makedirs(debug_dir, exist_ok=True)
     
     try:
@@ -683,10 +727,14 @@ def extract_puzzle_pieces(input_image, svg_file, output_folder, prefix="piece", 
                     
                     # Crop the piece and store it
                     cropped_piece = piece_img.crop(bbox)
-                    piece_images[(row, col)] = cropped_piece
+                    
+                    # Ensure the piece is properly centered
+                    centered_piece = ensure_centered_piece(cropped_piece, padding)
+                    piece_images[(row, col)] = centered_piece
+                    
                     # Update maximum dimensions
-                    max_piece_width = max(max_piece_width, cropped_piece.width)
-                    max_piece_height = max(max_piece_height, cropped_piece.height)
+                    max_piece_width = max(max_piece_width, centered_piece.width)
+                    max_piece_height = max(max_piece_height, centered_piece.height)
                 else:
                     print(f"WARNING: No bounding box found for piece at row {row}, col {col}")
                     
@@ -709,13 +757,16 @@ def extract_puzzle_pieces(input_image, svg_file, output_folder, prefix="piece", 
                         # Crop a fallback piece from the original image
                         fallback_piece = input_img.crop(bbox)
                         
+                        # Center the piece
+                        centered_fallback = ensure_centered_piece(fallback_piece, padding)
+                        
                         # Store the bbox and piece
                         piece_bboxes[(row, col)] = bbox
-                        piece_images[(row, col)] = fallback_piece
+                        piece_images[(row, col)] = centered_fallback
                         
                         # Update maximum dimensions
-                        max_piece_width = max(max_piece_width, fallback_piece.width)
-                        max_piece_height = max(max_piece_height, fallback_piece.height)
+                        max_piece_width = max(max_piece_width, centered_fallback.width)
+                        max_piece_height = max(max_piece_height, centered_fallback.height)
                         
                         print(f"Created fallback piece for {row},{col}")
         
@@ -735,11 +786,42 @@ def extract_puzzle_pieces(input_image, svg_file, output_folder, prefix="piece", 
                     piece_img = piece_images[(row, col)]
                     piece_key = f"{row}_{col}"
                     
+                    # Special debug for specific pieces
+                    debug_this_piece = (row == 1 and col == 0) or (row == 0 and col == 2)
+                    
+                    if debug or debug_this_piece:
+                        print(f"\n{'='*50}")
+                        print(f"DETAILED DEBUG FOR PIECE {row}_{col}")
+                        print(f"{'='*50}")
+                        print(f"Piece dimensions: {piece_img.width}x{piece_img.height}")
+                        
+                        # Save the piece as a separate file for inspection
+                        debug_piece_path = os.path.join(debug_dir, f"piece_{row}_{col}_raw.png")
+                        piece_img.save(debug_piece_path)
+                        print(f"Raw piece saved to: {debug_piece_path}")
+                    
                     # Find handle pixel from SVG intersections
                     svg_handle = find_handle_pixel_from_svg(svg_file, row, col, rows, cols, img_width, img_height)
                     
-                    # Find handle pixel in the cropped piece image
-                    handle_in_piece = find_handle_pixel(piece_img)
+                    # Find corner pixel using our improved corner detection
+                    handle_in_piece = find_corner_pixel(piece_img, row=row, col=col, rows=rows, cols=cols, 
+                                                      debug_output=(debug or debug_this_piece))
+                    
+                    if debug or debug_this_piece:
+                        print(f"SVG handle: {svg_handle}")
+                        print(f"Corner pixel: {handle_in_piece}")
+                        
+                        # Save piece with handle marked
+                        debug_piece = piece_img.copy()
+                        draw = ImageDraw.Draw(debug_piece)
+                        
+                        if handle_in_piece:
+                            y, x = handle_in_piece
+                            draw.ellipse((x-3, y-3, x+3, y+3), fill=(255, 0, 0, 255))
+                        
+                        debug_path = os.path.join(debug_dir, f"debug_handle_{row}_{col}.png")
+                        debug_piece.save(debug_path)
+                        print(f"Piece with debug handle saved to: {debug_path}")
                     
                     if svg_handle and handle_in_piece:
                         # Calculate the offset from the original position
@@ -751,8 +833,12 @@ def extract_puzzle_pieces(input_image, svg_file, output_folder, prefix="piece", 
                         
                         # Adjust for the crop bounding box
                         bbox = piece_bboxes[(row, col)]
-                        orig_x_in_piece = orig_x - bbox[0]
-                        orig_y_in_piece = orig_y - bbox[1]
+                        
+                        if debug or debug_this_piece:
+                            print(f"Bounding box: {bbox}")
+                            print(f"Orig position: ({orig_x}, {orig_y})")
+                            print(f"Piece position: ({piece_x}, {piece_y})")
+                            print(f"Calculated offset: ({orig_x - piece_x - bbox[0]}, {orig_y - piece_y - bbox[1]})")
                         
                         # Store solution data - convert NumPy types to native Python types
                         solution_data[piece_key] = {
@@ -765,13 +851,6 @@ def extract_puzzle_pieces(input_image, svg_file, output_folder, prefix="piece", 
                             "offset_x": int(orig_x - piece_x - bbox[0]),  # x offset to place piece correctly
                             "offset_y": int(orig_y - piece_y - bbox[1])   # y offset to place piece correctly
                         }
-                        
-                        # Add debug marker for handle pixel if in debug mode
-                        if debug:
-                            debug_piece = piece_img.copy()
-                            draw = ImageDraw.Draw(debug_piece)
-                            draw.ellipse((piece_x-3, piece_y-3, piece_x+3, piece_y+3), fill=(255, 0, 0, 255))
-                            debug_piece.save(os.path.join(debug_dir, f"handle_{row}_{col}.png"))
                     else:
                         # If handle pixel detection failed, use grid-based approach
                         # Calculate grid-based handle position
@@ -802,13 +881,29 @@ def extract_puzzle_pieces(input_image, svg_file, output_folder, prefix="piece", 
                             "offset_x": int(orig_x - piece_x - bbox[0]),
                             "offset_y": int(orig_y - piece_y - bbox[1])
                         }
+                    
+                    # Draw handle pixels on pieces if requested
+                    if show_handles:
+                        handle_x = solution_data[piece_key]["handle_x"]
+                        handle_y = solution_data[piece_key]["handle_y"]
                         
-                        # Add debug marker for grid-based handle
-                        if debug:
-                            debug_piece = piece_img.copy()
-                            draw = ImageDraw.Draw(debug_piece)
-                            draw.ellipse((piece_x-3, piece_y-3, piece_x+3, piece_y+3), fill=(0, 255, 0, 255))
-                            debug_piece.save(os.path.join(debug_dir, f"grid_handle_{row}_{col}.png"))
+                        # Create a crosshair at the handle pixel
+                        draw = ImageDraw.Draw(piece_img)
+                        
+                        # Crosshair size
+                        size = 5
+                        
+                        # Draw horizontal line
+                        draw.line((handle_x - size, handle_y, handle_x + size, handle_y), 
+                                fill=(255, 0, 0, 255), width=1)
+                        
+                        # Draw vertical line
+                        draw.line((handle_x, handle_y - size, handle_x, handle_y + size), 
+                                fill=(255, 0, 0, 255), width=1)
+                        
+                        # Also add a small circle at the center
+                        draw.ellipse((handle_x - 2, handle_y - 2, handle_x + 2, handle_y + 2), 
+                                   fill=(255, 0, 0, 255))
                     
                     # Apply fixed size and centering if requested
                     if fixed_size:
@@ -882,7 +977,7 @@ def main():
         args.image, args.svg, output_folder, 
         args.prefix, args.format, args.padding, 
         args.fixed_size, args.output_width, args.output_height,
-        args.debug, puzzle_name, layout_name
+        args.debug, puzzle_name, layout_name, args.show_handles
     )
 
 if __name__ == "__main__":
