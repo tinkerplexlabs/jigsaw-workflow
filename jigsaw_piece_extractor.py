@@ -93,6 +93,9 @@ def main():
     tempdir = tempfile.mkdtemp()
     os.makedirs(args.output, exist_ok=True)
 
+    pieces_dir = os.path.join(args.output, "pieces")
+    os.makedirs(pieces_dir, exist_ok=True)
+
     for row in range(rows):
         for col in range(cols):
             mask = Image.new("L", img.size, 255)
@@ -145,7 +148,9 @@ def main():
 
             piece = Image.new("RGBA", img.size, (0, 0, 0, 0))
             piece.paste(img, (0, 0), mask)
-            outpath = os.path.join(args.output, f"piece_{row}_{col}.png")
+            pieces_dir = os.path.join(args.output, "pieces")
+            os.makedirs(pieces_dir, exist_ok=True)
+            outpath = os.path.join(pieces_dir, f"{row}_{col}.png")
             piece.save(outpath)
             print(f"Saved {outpath}")
 
