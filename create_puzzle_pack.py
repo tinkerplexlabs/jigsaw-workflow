@@ -64,7 +64,7 @@ def convert_outline_to_ipuz(outline_svg, layout_dir):
 
 def extract_puzzle_pieces(image_path, split_svg, output_dir, puzzle_name, layout_name):
     subprocess.run([
-        "python3", "jigsaw_piece_extractor.py",
+        "python3", "jigsaw_piece_extractor_exact.py",
         image_path,
         split_svg,
         "--output", output_dir
@@ -91,12 +91,24 @@ def create_puzzle_pack(image_path, pack_name, grids, output_dir, author, copyrig
 
     grid_sizes = [(int(g.split('x')[0]), int(g.split('x')[1])) if 'x' in g else (int(g), int(g)) for g in grids.split(',')]
     layouts = []
+    
+    # Define standard tile size in pixels
+    TILE_SIZE = 256
+    
     for cols, rows in grid_sizes:
         layout_name = f"{cols}x{rows}"
         layout_dir = os.path.join(layouts_dir, layout_name)
         os.makedirs(layout_dir, exist_ok=True)
         print(f"\nProcessing layout: {layout_name}")
-        outline_svg = generate_jigsaw_outline(layout_dir, cols, rows, img_width, img_height)
+        
+        # Calculate canvas dimensions based on grid size and standard tile size
+        # This ensures consistent dimensions regardless of source image size
+        canvas_width = cols * TILE_SIZE
+        canvas_height = rows * TILE_SIZE
+        
+        print(f"  Grid: {cols}x{rows}, Canvas: {canvas_width}x{canvas_height}px")
+        
+        outline_svg = generate_jigsaw_outline(layout_dir, cols, rows, canvas_width, canvas_height)
         split_svg, ipuz_json = convert_outline_to_ipuz(outline_svg, layout_dir)
         extract_puzzle_pieces(image_path, split_svg, layout_dir, puzzle_name, layout_name)
         layouts.append(layout_name)
