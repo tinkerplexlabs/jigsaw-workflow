@@ -38,6 +38,49 @@ def create_manifest(pack_dir, pack_name, author, copyright_info, puzzles):
     with open(os.path.join(pack_dir, "manifest.json"), 'w') as f:
         json.dump(manifest, f, indent=2)
 
+def normalize_input_image(image_path, target_size=2048):
+    """
+    Normalize input image to target_size x target_size.
+    
+    This ensures consistent canvas dimensions across all puzzle generation steps,
+    preventing scale mismatches between the SVG layout (which uses TILE_SIZE * grid_size)
+    and the actual piece images extracted from the source image.
+    
+    Args:
+        image_path: Path to the original input image
+        target_size: Target dimensions (default 2048x2048 for 8x8 grid with 256px tiles)
+    
+    Returns:
+        Path to the normalized temporary image file
+    """
+    with Image.open(image_path) as img:
+        orig_width, orig_height = img.size
+        
+        # If already correct size, just convert to RGBA and save
+        if orig_width == target_size and orig_height == target_size:
+            if img.mode != 'RGBA':
+                img = img.convert('RGBA')
+            temp_path = tempfile.NamedTemporaryFile(suffix='.png', delete=False).name
+            img.save(temp_path)
+            print(f"  Input image already {target_size}x{target_size}, using as-is")
+            return temp_path
+        
+        # Resize to target dimensions
+        print(f"  Resizing input image from {orig_width}x{orig_height} to {target_size}x{target_size}")
+        
+        # Convert to RGBA if needed
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+        
+        # High-quality resize using Lanczos resampling
+        resized = img.resize((target_size, target_size), Image.Resampling.LANCZOS)
+        
+        # Save to temporary file
+        temp_path = tempfile.NamedTemporaryFile(suffix='.png', delete=False).name
+        resized.save(temp_path)
+        
+        return temp_path
+
 def generate_jigsaw_outline(output_dir, cols, rows, width, height, seed=None):
     if seed is None:
         seed = random.randint(1, 10000)
@@ -76,45 +119,73 @@ def get_image_dimensions(image_path):
 
 def create_puzzle_pack(image_path, pack_name, grids, output_dir, author, copyright_info):
     pack_dir = create_directory_structure(output_dir, pack_name)
-    img_width, img_height = get_image_dimensions(image_path)
-    puzzle_name = "puzzle_01"
-    puzzle_dir = os.path.join(pack_dir, puzzle_name)
-    os.makedirs(puzzle_dir, exist_ok=True)
-    layouts_dir = os.path.join(puzzle_dir, "layouts")
-    os.makedirs(layouts_dir, exist_ok=True)
-
-    preview_path = os.path.join(puzzle_dir, "preview.jpg")
-    with Image.open(image_path) as img:
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
-        img.save(preview_path, quality=90)
-
-    grid_sizes = [(int(g.split('x')[0]), int(g.split('x')[1])) if 'x' in g else (int(g), int(g)) for g in grids.split(',')]
-    layouts = []
     
     # Define standard tile size in pixels
     TILE_SIZE = 256
+    BASE_CANVAS_SIZE = 2048  # Standard base size for 8x8 grid (8 * 256)
     
-    for cols, rows in grid_sizes:
-        layout_name = f"{cols}x{rows}"
-        layout_dir = os.path.join(layouts_dir, layout_name)
-        os.makedirs(layout_dir, exist_ok=True)
-        print(f"\nProcessing layout: {layout_name}")
-        
-        # Calculate canvas dimensions based on grid size and standard tile size
-        # This ensures consistent dimensions regardless of source image size
-        canvas_width = cols * TILE_SIZE
-        canvas_height = rows * TILE_SIZE
-        
-        print(f"  Grid: {cols}x{rows}, Canvas: {canvas_width}x{canvas_height}px")
-        
-        outline_svg = generate_jigsaw_outline(layout_dir, cols, rows, canvas_width, canvas_height)
-        split_svg, ipuz_json = convert_outline_to_ipuz(outline_svg, layout_dir)
-        extract_puzzle_pieces(image_path, split_svg, layout_dir, puzzle_name, layout_name)
-        layouts.append(layout_name)
+    # Normalize input image to BASE_CANVAS_SIZE to ensure consistent scaling
+    print(f"\nNormalizing input image to {BASE_CANVAS_SIZE}x{BASE_CANVAS_SIZE}...")
+    normalized_image_path = normalize_input_image(image_path, BASE_CANVAS_SIZE)
+    
+    try:
+        puzzle_name = "puzzle_01"
+        puzzle_dir = os.path.join(pack_dir, puzzle_name)
+        os.makedirs(puzzle_dir, exist_ok=True)
+        layouts_dir = os.path.join(puzzle_dir, "layouts")
+        os.makedirs(layouts_dir, exist_ok=True)
 
-    create_manifest(pack_dir, pack_name, author, copyright_info, [{"name": puzzle_name, "layouts": layouts}])
-    return pack_dir
+        # Create preview from original image (for best quality)
+        preview_path = os.path.join(puzzle_dir, "preview.jpg")
+        with Image.open(image_path) as img:
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            img.save(preview_path, quality=90)
+
+        grid_sizes = [(int(g.split('x')[0]), int(g.split('x')[1])) if 'x' in g else (int(g), int(g)) for g in grids.split(',')]
+        layouts = []
+        
+        for cols, rows in grid_sizes:
+            layout_name = f"{cols}x{rows}"
+            layout_dir = os.path.join(layouts_dir, layout_name)
+            os.makedirs(layout_dir, exist_ok=True)
+            print(f"\nProcessing layout: {layout_name}")
+            
+            # Calculate canvas dimensions based on grid size and standard tile size
+            canvas_width = cols * TILE_SIZE
+            canvas_height = rows * TILE_SIZE
+            
+            print(f"  Grid: {cols}x{rows}, Canvas: {canvas_width}x{canvas_height}px")
+            
+            # For grids larger than 8x8, we need to scale up the normalized image
+            if canvas_width != BASE_CANVAS_SIZE or canvas_height != BASE_CANVAS_SIZE:
+                print(f"  Scaling normalized image to {canvas_width}x{canvas_height} for this layout...")
+                with Image.open(normalized_image_path) as norm_img:
+                    scaled_img = norm_img.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
+                    scaled_temp_path = tempfile.NamedTemporaryFile(suffix='.png', delete=False).name
+                    scaled_img.save(scaled_temp_path)
+                
+                layout_image_path = scaled_temp_path
+            else:
+                layout_image_path = normalized_image_path
+            
+            try:
+                outline_svg = generate_jigsaw_outline(layout_dir, cols, rows, canvas_width, canvas_height)
+                split_svg, ipuz_json = convert_outline_to_ipuz(outline_svg, layout_dir)
+                extract_puzzle_pieces(layout_image_path, split_svg, layout_dir, puzzle_name, layout_name)
+                layouts.append(layout_name)
+            finally:
+                # Clean up scaled image if we created one
+                if layout_image_path != normalized_image_path and os.path.exists(layout_image_path):
+                    os.unlink(layout_image_path)
+
+        create_manifest(pack_dir, pack_name, author, copyright_info, [{"name": puzzle_name, "layouts": layouts}])
+        return pack_dir
+        
+    finally:
+        # Clean up normalized image
+        if os.path.exists(normalized_image_path):
+            os.unlink(normalized_image_path)
 
 def create_zip_archive(pack_dir):
     shutil.make_archive(pack_dir, 'zip', os.path.dirname(pack_dir), os.path.basename(pack_dir))
