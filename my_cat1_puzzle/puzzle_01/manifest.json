@@ -1,0 +1,12 @@
+{
+  "name": "puzzle_01",
+  "layouts": [
+    "4x4"
+  ],
+  "pieces_count": 16,
+  "grid_size": {
+    "rows": 4,
+    "cols": 4
+  },
+  "created_at": "cat1.png"
+}

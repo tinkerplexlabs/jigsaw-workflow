@@ -81,15 +81,13 @@ def normalize_input_image(image_path, target_size=2048):
         
         return temp_path
 
-def generate_jigsaw_outline(output_dir, cols, rows, width, height, seed=None):
+def generate_jigsaw_outline(output_dir, cols, rows, seed=None):
     if seed is None:
         seed = random.randint(1, 10000)
     outline_svg = os.path.join(output_dir, "outline.svg")
     subprocess.run([
         "python3", "gen_jigsaw.py",
         "--grid", str(cols), str(rows),
-        "--width", str(width),
-        "--height", str(height),
         "--seed", str(seed),
         "-o", outline_svg
     ], check=True)
@@ -107,7 +105,7 @@ def convert_outline_to_ipuz(outline_svg, layout_dir):
 
 def extract_puzzle_pieces(image_path, split_svg, output_dir, puzzle_name, layout_name):
     subprocess.run([
-        "python3", "jigsaw_piece_extractor_exact.py",
+        "python3", "extract_pieces.py",
         image_path,
         split_svg,
         "--output", output_dir
@@ -146,7 +144,7 @@ def create_puzzle_pack(image_path, pack_name, grids, output_dir, author, copyrig
         layouts = []
         
         for cols, rows in grid_sizes:
-            layout_name = f"{cols}x{rows}"
+            layout_name = f"{cols}x{rows}_optimized"
             layout_dir = os.path.join(layouts_dir, layout_name)
             os.makedirs(layout_dir, exist_ok=True)
             print(f"\nProcessing layout: {layout_name}")
@@ -170,7 +168,7 @@ def create_puzzle_pack(image_path, pack_name, grids, output_dir, author, copyrig
                 layout_image_path = normalized_image_path
             
             try:
-                outline_svg = generate_jigsaw_outline(layout_dir, cols, rows, canvas_width, canvas_height)
+                outline_svg = generate_jigsaw_outline(layout_dir, cols, rows)
                 split_svg, ipuz_json = convert_outline_to_ipuz(outline_svg, layout_dir)
                 extract_puzzle_pieces(layout_image_path, split_svg, layout_dir, puzzle_name, layout_name)
                 layouts.append(layout_name)

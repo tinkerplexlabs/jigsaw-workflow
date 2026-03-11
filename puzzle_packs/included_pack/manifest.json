@@ -1,0 +1,15 @@
+{
+  "name": "included_pack",
+  "created_at": "2025-06-03 13:13:42",
+  "puzzles": [
+    {
+      "name": "puzzle_01",
+      "layouts": [
+        "8x8",
+        "12x12",
+        "15x15"
+      ]
+    }
+  ],
+  "author": "Dan Shields"
+}

@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Jigsaw Puzzle Extension for ipuz",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "http://ipuz.org/v2"
+    },
+    "kind": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "const": "http://ipuz.org/jigsaw#1"
+      },
+      "minItems": 1
+    },
+    "image": {
+      "type": "string"
+    },
+    "cutArrays": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "orientation": {
+            "type": "string",
+            "enum": [
+              "horizontal",
+              "vertical",
+              "none"
+            ]
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "d": {
+                  "type": "string"
+                },
+                "transform": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "d"
+              ]
+            }
+          }
+        },
+        "required": [
+          "paths"
+        ]
+      }
+    },
+    "canvas": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "width",
+        "height"
+      ]
+    },
+    "pieceSettings": {
+      "type": "object",
+      "properties": {
+        "snapMethod": {
+          "type": "string"
+        },
+        "allowRotation": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "required": [
+    "version",
+    "kind",
+    "cutArrays",
+    "canvas"
+  ]
+}

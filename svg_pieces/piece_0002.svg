@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2048px" height="2048px" viewBox="0 0 2048 2048" version="1.1"><defs><clipPath id="clip"><path d="M 2.0 0.0 L 298.0 0.0 A 2.0 2.0 0 0 1 300.0 2.0 L 300.0 198.0 A 2.0 2.0 0 0 1 298.0 200.0 L 2.0 200.0 A 2.0 2.0 0 0 1 0.0 198.0 L 0.0 2.0 A 2.0 2.0 0 0 1 2.0 0.0 " /></clipPath></defs><image xlink:href="cat1.png" width="2048" height="2048" clip-path="url(#clip)" id="bg" /></svg>

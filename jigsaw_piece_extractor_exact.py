@@ -34,8 +34,9 @@ def extract_svg_info(svg_file):
     root = tree.getroot()
     
     # Extract dimensions
-    width = float(root.attrib.get("width", "1024").replace("mm", "").replace("px", ""))
-    height = float(root.attrib.get("height", "1024").replace("mm", "").replace("px", ""))
+    viewbox = root.attrib.get("viewBox", "0 0 1024 1024").split()
+    width = float(viewbox[2])
+    height = float(viewbox[3])
     
     # SVG namespace
     ns = {'svg': 'http://www.w3.org/2000/svg'}
@@ -172,8 +173,8 @@ def extract_pieces_exact(image_path, svg_file, output_dir):
     svg_height = svg_info['height']
     
     # Calculate grid dimensions
-    rows = len(svg_info['horizontal_cuts']) + 1
-    cols = len(svg_info['vertical_cuts']) + 1
+    rows = len(svg_info['horizontal_cuts']) - 1
+    cols = len(svg_info['vertical_cuts']) - 1
     
     print(f"Extracting {rows}×{cols} puzzle pieces")
     print(f"SVG dimensions: {svg_width}×{svg_height}")

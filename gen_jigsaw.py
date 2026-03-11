@@ -6,15 +6,14 @@ import random
 
 
 class JigsawGenerator:
-    def __init__(self, width, height, xn, yn, tab_size, jitter, seed, corner_radius):
-        self.width = width
-        self.height = height
+    def __init__(self, xn, yn, tab_size, jitter, seed):
+        self.width = xn
+        self.height = yn
         self.xn = xn
         self.yn = yn
         self.t = tab_size / 200.0
         self.j = jitter / 100.0
         self.seed = seed
-        self.corner_radius = corner_radius
         self.offset = 0.0
         
         # Initialize variables needed for puzzle generation
@@ -88,73 +87,114 @@ class JigsawGenerator:
         ret = self.ow() + self.sw() * v * multiplier
         return round(ret * 100) / 100
     
-    # Points for the Bezier curves
-    def p0l(self): return self.l(0.0)
-    def p0w(self): return self.w(0.0)
-    def p1l(self): return self.l(0.2)
-    def p1w(self): return self.w(self.a)
-    def p2l(self): return self.l(0.5 + self.b + self.d)
-    def p2w(self): return self.w(-self.t + self.c)
-    def p3l(self): return self.l(0.5 - self.t + self.b)
-    def p3w(self): return self.w(self.t + self.c)
-    def p4l(self): return self.l(0.5 - 2.0 * self.t + self.b - self.d)
-    def p4w(self): return self.w(3.0 * self.t + self.c)
-    def p5l(self): return self.l(0.5 + 2.0 * self.t + self.b - self.d)
-    def p5w(self): return self.w(3.0 * self.t + self.c)
-    def p6l(self): return self.l(0.5 + self.t + self.b)
-    def p6w(self): return self.w(self.t + self.c)
-    def p7l(self): return self.l(0.5 + self.b + self.d)
-    def p7w(self): return self.w(-self.t + self.c)
-    def p8l(self): return self.l(0.8)
-    def p8w(self): return self.w(self.e)
-    def p9l(self): return self.l(1.0)
-    def p9w(self): return self.w(0.0)
-    
+    # Anchor points for each cell edge (all lie ON the curve)
+    def _cell_anchors(self):
+        """Return the 10 anchor points for the current cell edge in (l, w) form."""
+        return [
+            (self.l(0.0),                      self.w(0.0)),
+            (self.l(0.2),                      self.w(self.a)),
+            (self.l(0.5 + self.b + self.d),    self.w(-self.t + self.c)),
+            (self.l(0.5 - self.t + self.b),    self.w(self.t + self.c)),
+            (self.l(0.5 - 2*self.t + self.b - self.d), self.w(3*self.t + self.c)),
+            (self.l(0.5 + 2*self.t + self.b - self.d), self.w(3*self.t + self.c)),
+            (self.l(0.5 + self.t + self.b),    self.w(self.t + self.c)),
+            (self.l(0.5 + self.b + self.d),    self.w(-self.t + self.c)),
+            (self.l(0.8),                      self.w(self.e)),
+            (self.l(1.0),                      self.w(0.0)),
+        ]
+
+    @staticmethod
+    def _catmull_rom_path(anchors, swap=False):
+        """Generate an SVG path through *anchors* using Catmull-Rom → cubic bezier.
+
+        If *swap* is True the (l, w) pairs are emitted as (w, l) — used for
+        vertical cuts where the length axis is y.
+        """
+        def fmt(l, w):
+            x, y = (w, l) if swap else (l, w)
+            return f"{round(x * 100) / 100} {round(y * 100) / 100}"
+
+        n = len(anchors)
+        al, aw = anchors[0]
+        x0, y0 = (aw, al) if swap else (al, aw)
+        path = f"M {round(x0*100)/100},{round(y0*100)/100} "
+
+        for i in range(n - 1):
+            # Tangent at anchor i
+            if i == 0:
+                tl0 = anchors[1][0] - anchors[0][0]
+                tw0 = anchors[1][1] - anchors[0][1]
+            else:
+                tl0 = (anchors[i + 1][0] - anchors[i - 1][0]) / 2
+                tw0 = (anchors[i + 1][1] - anchors[i - 1][1]) / 2
+
+            # Tangent at anchor i+1
+            if i + 1 == n - 1:
+                tl1 = anchors[n - 1][0] - anchors[n - 2][0]
+                tw1 = anchors[n - 1][1] - anchors[n - 2][1]
+            else:
+                tl1 = (anchors[i + 2][0] - anchors[i][0]) / 2
+                tw1 = (anchors[i + 2][1] - anchors[i][1]) / 2
+
+            # Convert to cubic bezier control points
+            cp1 = (anchors[i][0] + tl0 / 3,     anchors[i][1] + tw0 / 3)
+            cp2 = (anchors[i + 1][0] - tl1 / 3, anchors[i + 1][1] - tw1 / 3)
+
+            path += (f"C {fmt(*cp1)} {fmt(*cp2)} "
+                     f"{fmt(*anchors[i + 1])} ")
+
+        return path
+
     def gen_dh(self):
-        """Generate horizontal dividers"""
+        """Generate horizontal dividers (including top and bottom border edges)"""
         paths = []
         self.vertical = False
-        
+
+        paths.append(f"M 0,0 L {self.width},0 ")
+
         for self.yi in range(1, self.yn):
             self.xi = 0
             self.first()
-            path = f"M {self.p0l()},{self.p0w()} "
-            
+
+            # Collect anchor points across all cells in this row
+            anchors = []
             for self.xi in range(0, self.xn):
-                path += (f"C {self.p1l()} {self.p1w()} {self.p2l()} {self.p2w()} "
-                         f"{self.p3l()} {self.p3w()} ")
-                path += (f"C {self.p4l()} {self.p4w()} {self.p5l()} {self.p5w()} "
-                         f"{self.p6l()} {self.p6w()} ")
-                path += (f"C {self.p7l()} {self.p7w()} {self.p8l()} {self.p8w()} "
-                         f"{self.p9l()} {self.p9w()} ")
+                pts = self._cell_anchors()
+                if self.xi == 0:
+                    anchors.extend(pts)
+                else:
+                    anchors.extend(pts[1:])  # p0 duplicates previous p9
                 self.next()
-            
-            paths.append(path)
-        
-        return "".join(paths)
-    
+
+            paths.append(self._catmull_rom_path(anchors, swap=False))
+
+        paths.append(f"M 0,{self.height} L {self.width},{self.height} ")
+        return paths
+
     def gen_dv(self):
-        """Generate vertical dividers"""
+        """Generate vertical dividers (including left and right border edges)"""
         paths = []
         self.vertical = True
-        
+
+        paths.append(f"M 0,0 L 0,{self.height} ")
+
         for self.xi in range(1, self.xn):
             self.yi = 0
             self.first()
-            path = f"M {self.p0w()},{self.p0l()} "
-            
+
+            anchors = []
             for self.yi in range(0, self.yn):
-                path += (f"C {self.p1w()} {self.p1l()} {self.p2w()} {self.p2l()} "
-                         f"{self.p3w()} {self.p3l()} ")
-                path += (f"C {self.p4w()} {self.p4l()} {self.p5w()} {self.p5l()} "
-                         f"{self.p6w()} {self.p6l()} ")
-                path += (f"C {self.p7w()} {self.p7l()} {self.p8w()} {self.p8l()} "
-                         f"{self.p9w()} {self.p9l()} ")
+                pts = self._cell_anchors()
+                if self.yi == 0:
+                    anchors.extend(pts)
+                else:
+                    anchors.extend(pts[1:])
                 self.next()
-            
-            paths.append(path)
-        
-        return "".join(paths)
+
+            paths.append(self._catmull_rom_path(anchors, swap=True))
+
+        paths.append(f"M {self.width},0 L {self.width},{self.height} ")
+        return paths
     
     def gen_db(self):
         """Generate border"""
@@ -182,25 +222,15 @@ class JigsawGenerator:
         
         # SVG header
         svg = (f'<svg xmlns="http://www.w3.org/2000/svg" version="1.0" '
-               f'width="{self.width}mm" height="{self.height}mm" '
-               f'viewBox="0 0 {self.width} {self.height}">')
-        
-        # Horizontal dividers
-        svg += (f'<path fill="none" stroke="Black" stroke-width="0.01"  class="horizontal" d="'
-                f'{self.gen_dh()}'
-                f'"></path>')
-        
-        # Vertical dividers
-        svg += (f'<path fill="none" stroke="Black" stroke-width="0.01"  class="vertical" d="'
-                f'{self.gen_dv()}'
-                f'"></path>')
-        
-        # Border
-        svg += (f'<path fill="none" stroke="Black" stroke-width="0.01" class="border" d="'
-                f'{self.gen_db()}'
-                f'"></path>')
-        
-        svg += '</svg>'
+               f'viewBox="0 0 {self.width} {self.height}">\n')
+
+        for d in self.gen_dh():
+            svg += f'  <path d="{d}" class="horizontal" fill="none" stroke="black" stroke-width="0.01"/>\n'
+
+        for d in self.gen_dv():
+            svg += f'  <path d="{d}" class="vertical" fill="none" stroke="black" stroke-width="0.01"/>\n'
+
+        svg += '</svg>\n'
         return svg
 
 
@@ -216,40 +246,30 @@ def main():
                         help='Tab size percentage (default: 20.0)')
     parser.add_argument('--seed', type=int, default=None,
                         help='Random seed (default: random)')
-    parser.add_argument('--width', type=int, default=300,
-                        help='Width in mm (default: 300)')
-    parser.add_argument('--height', type=int, default=300,
-                        help='Height in mm (default: 300)')
-    parser.add_argument('--radius', type=float, default=2.0,
-                        help='Corner radius in mm (default: 2.0)')
-    
+
     args = parser.parse_args()
-    
+
     # Use current time as seed if none provided
     if args.seed is None:
         args.seed = int(random.random() * 10000)
-    
+
     # Create jigsaw generator
     jigsaw = JigsawGenerator(
-        width=args.width,
-        height=args.height,
         xn=args.grid[0],
         yn=args.grid[1],
         tab_size=args.tabsize,
         jitter=args.jitter,
         seed=args.seed,
-        corner_radius=args.radius
     )
-    
+
     # Generate SVG content
     svg_content = jigsaw.generate_svg()
-    
+
     # Save to file
     with open(args.output, 'w') as f:
         f.write(svg_content)
-    
+
     print(f"Jigsaw puzzle saved to {args.output}")
-    print(f"Dimensions: {args.width}mm x {args.height}mm")
     print(f"Grid: {args.grid[0]} x {args.grid[1]}")
     print(f"Seed: {args.seed}")
 

@@ -1,0 +1,14 @@
+{
+  "name": "test_pack",
+  "created_at": "2025-05-26 22:05:22",
+  "puzzles": [
+    {
+      "name": "puzzle_01",
+      "layouts": [
+        "8x8",
+        "16x16",
+        "32x32"
+      ]
+    }
+  ]
+}

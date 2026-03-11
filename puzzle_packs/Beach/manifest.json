@@ -1,0 +1,14 @@
+{
+  "name": "Beach",
+  "created_at": "2025-10-21 14:17:09",
+  "puzzles": [
+    {
+      "name": "puzzle_01",
+      "layouts": [
+        "8x8",
+        "12x12",
+        "15x15"
+      ]
+    }
+  ]
+}
