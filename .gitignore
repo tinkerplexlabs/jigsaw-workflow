@@ -58,3 +58,4 @@ google/
 *.json
 !package.json
 !pubspec.json
+puzzle_packs/
