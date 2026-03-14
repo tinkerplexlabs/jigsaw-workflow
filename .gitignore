@@ -52,3 +52,9 @@ debug/
 
 # Logs
 *.log
+
+# Secrets / credentials
+google/
+*.json
+!package.json
+!pubspec.json
