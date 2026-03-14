@@ -27,7 +27,7 @@ def health():
 async def generate(
     image: UploadFile = File(...),
     pack_name: str = Form("Puzzle"),
-    grids: str = Form("4x4,6x6,8x8"),
+    grids: str = Form("8x8,12x12,15x15"),
     author: str = Form(""),
     copyright: str = Form(""),
 ):

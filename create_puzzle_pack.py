@@ -14,7 +14,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Create a jigsaw puzzle pack with multiple layouts from an image')
     parser.add_argument('image', type=str, help='Input image to create puzzles from')
     parser.add_argument('pack_name', type=str, help='Name of the puzzle pack')
-    parser.add_argument('--grids', type=str, default='2x2,4x4,8x8', help='Comma-separated list of grid sizes')
+    parser.add_argument('--grids', type=str, default='8x8,12x12,15x15', help='Comma-separated list of grid sizes')
     parser.add_argument('--output', type=str, default='puzzle_packs', help='Output directory for the puzzle pack')
     parser.add_argument('--author', type=str, default='', help='Author name')
     parser.add_argument('--copyright', type=str, default='', help='Copyright info')
@@ -27,15 +27,22 @@ def create_directory_structure(base_dir, pack_name):
 
 def create_manifest(pack_dir, pack_name, author, copyright_info, puzzles):
     manifest = {
-        "name": pack_name,
-        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "puzzles": puzzles
+        "version": "1.0",
+        "packId": pack_name,
+        "packTitle": pack_name,
+        "createdAt": datetime.now().isoformat(),
+        "puzzles": [
+            {
+                "id": p["name"],
+                "displayName": pack_name,
+                "previewPath": f"{p['name']}/preview.jpg",
+                "layouts": p["layouts"],
+                **({"author": author} if author else {}),
+            }
+            for p in puzzles
+        ],
     }
-    if author:
-        manifest["author"] = author
-    if copyright_info:
-        manifest["copyright"] = copyright_info
-    with open(os.path.join(pack_dir, "manifest.json"), 'w') as f:
+    with open(os.path.join(pack_dir, "pack_manifest.json"), 'w') as f:
         json.dump(manifest, f, indent=2)
 
 def normalize_input_image(image_path, target_size=2048):

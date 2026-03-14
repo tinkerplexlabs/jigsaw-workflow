@@ -1,0 +1,40 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Output directories
+pieces/
+pieces_exact/
+puzzle_packs/
+my_cat*/
+my_cat_pack/
+open_puzzle/
+out/
+beach/
+cat_test/
+svg_pieces/
+MyPuzzle/
+prompts/
+
+# Large binary files
+*.zip
+*.png
+*.jpg
+*.jpeg
+*.svg
+
+# Keep the Python scripts (gcloud sends everything to Cloud Build,
+# but the Dockerfile COPY is explicit, so we only need the files
+# referenced there plus the Dockerfile itself)
+!Dockerfile
+!requirements.txt
+!gen_jigsaw.py
+!svg_to_ipuz.py
+!extract_pieces.py
+!create_puzzle_pack.py
+!service.py
+
+# Google credentials / misc
+google/
+.git/

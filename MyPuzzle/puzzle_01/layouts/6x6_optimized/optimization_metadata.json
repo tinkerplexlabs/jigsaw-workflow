@@ -1,0 +1,592 @@
+{
+  "version": "1.0",
+  "canvas_size": {
+    "width": 1536,
+    "height": 1536
+  },
+  "pieces": {
+    "0_0": {
+      "bounds": {
+        "left": 0,
+        "top": 0,
+        "right": 305,
+        "bottom": 290,
+        "width": 305,
+        "height": 290
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "2340ddb4",
+      "cropped_filename": "0_0.png"
+    },
+    "0_1": {
+      "bounds": {
+        "left": 235,
+        "top": 0,
+        "right": 512,
+        "bottom": 276,
+        "width": 277,
+        "height": 276
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "4d7c8f12",
+      "cropped_filename": "0_1.png"
+    },
+    "0_2": {
+      "bounds": {
+        "left": 492,
+        "top": 0,
+        "right": 785,
+        "bottom": 258,
+        "width": 293,
+        "height": 258
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "887201c0",
+      "cropped_filename": "0_2.png"
+    },
+    "0_3": {
+      "bounds": {
+        "left": 763,
+        "top": 0,
+        "right": 1060,
+        "bottom": 275,
+        "width": 297,
+        "height": 275
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "24980bdb",
+      "cropped_filename": "0_3.png"
+    },
+    "0_4": {
+      "bounds": {
+        "left": 975,
+        "top": 0,
+        "right": 1333,
+        "bottom": 273,
+        "width": 358,
+        "height": 273
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "ec5540ae",
+      "cropped_filename": "0_4.png"
+    },
+    "0_5": {
+      "bounds": {
+        "left": 1254,
+        "top": 0,
+        "right": 1536,
+        "bottom": 275,
+        "width": 282,
+        "height": 275
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "80219e19",
+      "cropped_filename": "0_5.png"
+    },
+    "1_0": {
+      "bounds": {
+        "left": 0,
+        "top": 247,
+        "right": 278,
+        "bottom": 521,
+        "width": 278,
+        "height": 274
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "5c58c990",
+      "cropped_filename": "1_0.png"
+    },
+    "1_1": {
+      "bounds": {
+        "left": 251,
+        "top": 199,
+        "right": 548,
+        "bottom": 517,
+        "width": 297,
+        "height": 318
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "97c6a59b",
+      "cropped_filename": "1_1.png"
+    },
+    "1_2": {
+      "bounds": {
+        "left": 503,
+        "top": 239,
+        "right": 769,
+        "bottom": 565,
+        "width": 266,
+        "height": 326
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "186b66f7",
+      "cropped_filename": "1_2.png"
+    },
+    "1_3": {
+      "bounds": {
+        "left": 740,
+        "top": 210,
+        "right": 1048,
+        "bottom": 562,
+        "width": 308,
+        "height": 352
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "6f97d337",
+      "cropped_filename": "1_3.png"
+    },
+    "1_4": {
+      "bounds": {
+        "left": 1024,
+        "top": 246,
+        "right": 1300,
+        "bottom": 515,
+        "width": 276,
+        "height": 269
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "e8e1687f",
+      "cropped_filename": "1_4.png"
+    },
+    "1_5": {
+      "bounds": {
+        "left": 1280,
+        "top": 213,
+        "right": 1536,
+        "bottom": 515,
+        "width": 256,
+        "height": 302
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "0b33d4a5",
+      "cropped_filename": "1_5.png"
+    },
+    "2_0": {
+      "bounds": {
+        "left": 0,
+        "top": 489,
+        "right": 263,
+        "bottom": 795,
+        "width": 263,
+        "height": 306
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "319a2f02",
+      "cropped_filename": "2_0.png"
+    },
+    "2_1": {
+      "bounds": {
+        "left": 223,
+        "top": 483,
+        "right": 561,
+        "bottom": 813,
+        "width": 338,
+        "height": 330
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "3f30a62c",
+      "cropped_filename": "2_1.png"
+    },
+    "2_2": {
+      "bounds": {
+        "left": 489,
+        "top": 486,
+        "right": 772,
+        "bottom": 773,
+        "width": 283,
+        "height": 287
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "7b304768",
+      "cropped_filename": "2_2.png"
+    },
+    "2_3": {
+      "bounds": {
+        "left": 750,
+        "top": 479,
+        "right": 1043,
+        "bottom": 814,
+        "width": 293,
+        "height": 335
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "d821709c",
+      "cropped_filename": "2_3.png"
+    },
+    "2_4": {
+      "bounds": {
+        "left": 975,
+        "top": 481,
+        "right": 1306,
+        "bottom": 788,
+        "width": 331,
+        "height": 307
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "4d9a8a95",
+      "cropped_filename": "2_4.png"
+    },
+    "2_5": {
+      "bounds": {
+        "left": 1238,
+        "top": 489,
+        "right": 1536,
+        "bottom": 797,
+        "width": 298,
+        "height": 308
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "c08e56d6",
+      "cropped_filename": "2_5.png"
+    },
+    "3_0": {
+      "bounds": {
+        "left": 0,
+        "top": 764,
+        "right": 297,
+        "bottom": 1053,
+        "width": 297,
+        "height": 289
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "ac32b9cb",
+      "cropped_filename": "3_0.png"
+    },
+    "3_1": {
+      "bounds": {
+        "left": 224,
+        "top": 740,
+        "right": 544,
+        "bottom": 1071,
+        "width": 320,
+        "height": 331
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "9b7b89e8",
+      "cropped_filename": "3_1.png"
+    },
+    "3_2": {
+      "bounds": {
+        "left": 512,
+        "top": 740,
+        "right": 815,
+        "bottom": 1042,
+        "width": 303,
+        "height": 302
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "e84c50c4",
+      "cropped_filename": "3_2.png"
+    },
+    "3_3": {
+      "bounds": {
+        "left": 750,
+        "top": 735,
+        "right": 1031,
+        "bottom": 1057,
+        "width": 281,
+        "height": 322
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "a70a524c",
+      "cropped_filename": "3_3.png"
+    },
+    "3_4": {
+      "bounds": {
+        "left": 991,
+        "top": 710,
+        "right": 1335,
+        "bottom": 1048,
+        "width": 344,
+        "height": 338
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "72a59e93",
+      "cropped_filename": "3_4.png"
+    },
+    "3_5": {
+      "bounds": {
+        "left": 1259,
+        "top": 764,
+        "right": 1536,
+        "bottom": 1051,
+        "width": 277,
+        "height": 287
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "9ff80521",
+      "cropped_filename": "3_5.png"
+    },
+    "4_0": {
+      "bounds": {
+        "left": 0,
+        "top": 1024,
+        "right": 308,
+        "bottom": 1311,
+        "width": 308,
+        "height": 287
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "718ee9a2",
+      "cropped_filename": "4_0.png"
+    },
+    "4_1": {
+      "bounds": {
+        "left": 234,
+        "top": 1006,
+        "right": 559,
+        "bottom": 1289,
+        "width": 325,
+        "height": 283
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "45b6ec2a",
+      "cropped_filename": "4_1.png"
+    },
+    "4_2": {
+      "bounds": {
+        "left": 489,
+        "top": 1024,
+        "right": 796,
+        "bottom": 1241,
+        "width": 307,
+        "height": 217
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "67691844",
+      "cropped_filename": "4_2.png"
+    },
+    "4_3": {
+      "bounds": {
+        "left": 719,
+        "top": 1018,
+        "right": 1034,
+        "bottom": 1291,
+        "width": 315,
+        "height": 273
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "5a458154",
+      "cropped_filename": "4_3.png"
+    },
+    "4_4": {
+      "bounds": {
+        "left": 991,
+        "top": 1022,
+        "right": 1315,
+        "bottom": 1285,
+        "width": 324,
+        "height": 263
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "5700615b",
+      "cropped_filename": "4_4.png"
+    },
+    "4_5": {
+      "bounds": {
+        "left": 1269,
+        "top": 977,
+        "right": 1536,
+        "bottom": 1316,
+        "width": 267,
+        "height": 339
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "56ae95a4",
+      "cropped_filename": "4_5.png"
+    },
+    "5_0": {
+      "bounds": {
+        "left": 0,
+        "top": 1276,
+        "right": 291,
+        "bottom": 1536,
+        "width": 291,
+        "height": 260
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "10021703",
+      "cropped_filename": "5_0.png"
+    },
+    "5_1": {
+      "bounds": {
+        "left": 245,
+        "top": 1257,
+        "right": 545,
+        "bottom": 1536,
+        "width": 300,
+        "height": 279
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "2dc906aa",
+      "cropped_filename": "5_1.png"
+    },
+    "5_2": {
+      "bounds": {
+        "left": 501,
+        "top": 1226,
+        "right": 800,
+        "bottom": 1536,
+        "width": 299,
+        "height": 310
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "104e2f3f",
+      "cropped_filename": "5_2.png"
+    },
+    "5_3": {
+      "bounds": {
+        "left": 769,
+        "top": 1260,
+        "right": 1034,
+        "bottom": 1536,
+        "width": 265,
+        "height": 276
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "7a103ba0",
+      "cropped_filename": "5_3.png"
+    },
+    "5_4": {
+      "bounds": {
+        "left": 998,
+        "top": 1249,
+        "right": 1292,
+        "bottom": 1536,
+        "width": 294,
+        "height": 287
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "11a8cc1b",
+      "cropped_filename": "5_4.png"
+    },
+    "5_5": {
+      "bounds": {
+        "left": 1252,
+        "top": 1276,
+        "right": 1536,
+        "bottom": 1536,
+        "width": 284,
+        "height": 260
+      },
+      "canvas_size": {
+        "width": 1536,
+        "height": 1536
+      },
+      "content_hash": "8a6d0bea",
+      "cropped_filename": "5_5.png"
+    }
+  },
+  "statistics": {
+    "memory_reduction_percent": 96.30164393672237,
+    "total_pieces": 36,
+    "original_total_bytes": 339738624,
+    "optimized_total_bytes": 12564744,
+    "bytes_saved": 327173880
+  }
+}

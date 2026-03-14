@@ -250,9 +250,9 @@ def extract_pieces(image_path, svg_path, output_dir):
         piece[crop_mask] = img_array[y0:y1, x0:x1][crop_mask]
 
         piece_img = Image.fromarray(piece, "RGBA")
-        piece_path = os.path.join(pieces_dir, f"{r}_{c}.png")
-        piece_img.save(piece_path)
-        print(f"  {r}_{c}.png ({x1 - x0}x{y1 - y0})")
+        piece_path = os.path.join(pieces_dir, f"{r}_{c}.webp")
+        piece_img.save(piece_path, "WEBP", lossless=True)
+        print(f"  {r}_{c}.webp ({x1 - x0}x{y1 - y0})")
 
         piece_id = f"{r}_{c}"
         pw, ph = int(x1 - x0), int(y1 - y0)
@@ -279,7 +279,7 @@ def extract_pieces(image_path, svg_path, output_dir):
             },
             "canvas_size": {"width": img_w, "height": img_h},
             "content_hash": hashlib.sha256(piece_img.tobytes()).hexdigest()[:8],
-            "cropped_filename": f"{piece_id}.png",
+            "cropped_filename": f"{piece_id}.webp",
         }
 
         total_original_bytes += full_canvas_bytes
